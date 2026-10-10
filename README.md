@@ -3,7 +3,9 @@
 </p>
 
 # PS5GBA
-
+<p align="center">
+  <img src="screenshots/background.png" alt="PS5NES game shelf">
+</p>
 **Game Boy Advance games on your PS5, with the original PS5SX2 cover-flow interface.**
 
 **v2 — by YAHBALLON** · **App ID: PPSA99209**
