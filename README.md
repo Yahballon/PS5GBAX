@@ -1,14 +1,12 @@
-<p align="center">
-  <img src="gba/sce_sys/icon0.png" width="180" alt="PS5GBA logo">
-</p>
-
 # PS5GBA
-
+<p align="center">
+  <img src="screenshots/background.png" alt="PS5NES game shelf">
+</p>
 **Game Boy Advance games on your PS5, with the original PS5SX2 cover-flow interface.**
 
 **v2 — by YAHBALLON** · **App ID: PPSA99209**
 
-(AI-assisted) PS5GBA is a native PS5 homebrew Game Boy Advance emulator using **mGBA 0.10.5**. It reuses the working PS5SNES frontend while keeping the PS5SX2 shelf, animated game cases, cover glow, reflections, menu sounds and settings panel. The integration and upstream components retain their respective licenses.
+PS5GBA is a native PS5 homebrew Game Boy Advance emulator using **mGBA 0.10.5**. It reuses the working PS5SNES frontend while keeping the PS5SX2 shelf, animated game cases, cover glow, reflections, menu sounds and settings panel. The integration and upstream components retain their respective licenses.
 
 **Release status:** the v2 build requires a console retest. This repository contains source; installable application ZIPs must be built and attached separately to a GitHub release. See [RELEASE_NOTES.md](RELEASE_NOTES.md) and [TESTING.md](TESTING.md).
 
