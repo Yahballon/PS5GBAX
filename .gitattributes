@@ -1,0 +1,11 @@
+* text=auto
+*.sh text eol=lf
+ps5/proto/native/tooling/prospero-clang18 text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ttf binary
+*.otf binary
+*.spv binary

@@ -1,0 +1,17 @@
+name: Source release checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check source release hygiene (AI-assisted)
+        run: python3 gba/tools/check_release.py

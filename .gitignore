@@ -1,0 +1,37 @@
+gba/build*/
+dist/
+**/.git/
+__pycache__/
+*.o
+*.elf
+
+# Local builds and tool caches
+/build*/
+/ps5/build*/
+/ps5/frontend/build*/
+.cache/
+.venv/
+*.py[cod]
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Private configuration and user data
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.gba
+*.gb
+*.gbc
+*.nds
+*.sav
+*.srm
+gba_bios.bin
+
+# Legacy inherited verification reports; current status is in TESTING.md
+/gba/VERIFICATION*.txt
+/gba/TESTEN*.txt
