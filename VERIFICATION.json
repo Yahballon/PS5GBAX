@@ -2,10 +2,11 @@
   "ai_assisted": true,
   "core": "mGBA 0.10.5",
   "core_revision": "26b7884bc25a5933960f3cdcd98bac1ae14d42e2",
-  "native_build": "historically reported passed; not rerun",
-  "host_tests": "historically reported passed; not rerun",
+  "native_build": "passed",
+  "host_tests": "passed",
   "console_tested": false,
-  "package_sha256": "447dd5d5ebcf1af5d1fd6d53e910c38a6ccb93cc38f662545ecc546684624875",
-  "verification_scope": "Historical results supplied with project; not rerun for this checkout",
-  "package_sha256_scope": "Historical package; no matching application ZIP present in this checkout"
+  "package_sha256": "7ae3c7e7357279ae78feb48d6335e6ac4016cdd3df2903074b8c2e2789693609",
+  "verification_scope": "Fresh Ubuntu native build and host regression suite, 2026-10-10",
+  "package_sha256_scope": "dist/PS5GBA-v2-by-YAHBALLON.zip",
+  "package_checks": "ZIP CRC, required files, PPSA99209 title ID and all manifest hashes passed"
 }

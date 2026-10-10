@@ -25,3 +25,14 @@ reported with the selected graphics configuration; the v2 release build still
 requires a PS5 console retest. General firmware compatibility and sustained
 GPU performance across games have not been established. See `TESTING.md` and
 `RELEASING.md` before publishing.
+
+## Fresh build validation — 2026-10-10
+
+(AI-assisted) Compiled in Ubuntu with Clang/LLVM 18 using the prepared PS5
+dependencies. Native link, ELF memory parameters, signed-container integrity
+and the PPSA99209 filesystem helper passed. The host regression suite passed
+for the GBA core, library/settings, resampling and Vulkan rendering through 4K.
+ZIP CRC, required files, title ID and all 16 build-manifest file hashes passed.
+Package: `dist/PS5GBA-v2-by-YAHBALLON.zip`; SHA-256 is recorded in
+`VERIFICATION.json` and the adjacent checksum file. PS5 hardware testing remains
+pending; host rendering results do not establish console GPU performance.

@@ -21,5 +21,5 @@
    ZIP as a GitHub release asset. GitHub's automatic source ZIP is source only
    and cannot be installed as the application.
 
-No application ZIP is included in this source checkout. Do not describe a
+Generated application ZIPs are kept in ignored build/dist folders and are not included in Git source archives. Do not describe a
 release as verified merely because an earlier package passed checks.
