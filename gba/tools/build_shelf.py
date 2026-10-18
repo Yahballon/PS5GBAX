@@ -86,7 +86,7 @@ subprocess.run([str(tool),'self','--sign','--in',str(out/'eboot.elf'),'--out',st
 subprocess.run([str(tool),'self','--inspect','--file',str(app/'eboot.bin')],check=True)
 shutil.copytree(nes/'sce_sys',app/'sce_sys',dirs_exist_ok=True)
 shutil.copy2(deps/'PS5_Vulkan/runtime/libc.prx',app/'sce_module/libc.prx')
-subprocess.run(['python3',str(deps/'filesystem-helper/tools/build-lapy-helper.py'),'PPSA99209',str(out/'filesystem-helper')],check=True)
+subprocess.run(['python3',str(nes/'tools/build-lapy-helper.py'),'PPSA99209',str(out/'filesystem-helper')],check=True)
 for name in ['lapy.elf','lapy-manifest.json']:shutil.copy2(out/'filesystem-helper'/name,app/name)
 licenses=app/'licenses';licenses.mkdir(exist_ok=True)
 for path,name in [(core/'LICENSE','mGBA-MPL-2.0.txt'),(project/'COPYING.GPLv3','GPLv3.txt'),
