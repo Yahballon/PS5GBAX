@@ -16,7 +16,7 @@ The compiled SPIR-V is included in the source. After shader edits, regenerate it
 GLSLANG_VALIDATOR=/path/to/glslangValidator bash ps5/frontend/build_shaders.sh
 ```
 
-Build output: `gba/build-shelf/PS5GBA-v2-Covers-Performance-Defaults-by-YAHBALLON.zip`. Upload this generated application ZIP as a release asset; no prebuilt application is included in this source checkout. See [RELEASING.md](RELEASING.md) for the release checklist. The package includes the application-specific elevation helper, `eboot.bin`, metadata/icon, `sce_module/libc.prx` and license notices.
+Build output: `gba/build-shelf/PS5GBA-v2.1-by-YAHBALLON.zip`. Upload this generated application ZIP as a release asset; no prebuilt application is included in this source checkout. See [RELEASING.md](RELEASING.md) for the release checklist. The package includes the application-specific elevation helper, `eboot.bin`, metadata/icon, `sce_module/libc.prx` and license notices.
 
 Host tests (Clang/LLVM 18, Mesa Vulkan/llvmpipe and zlib required):
 
