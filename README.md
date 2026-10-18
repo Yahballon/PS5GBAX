@@ -4,11 +4,11 @@
 </p>
 **Game Boy Advance games on your PS5, with the original PS5SX2 cover-flow interface.**
 
-**v2 — by YAHBALLON** · **App ID: PPSA99209**
+**v2.1 — by YAHBALLON** · **App ID: PPSA99209**
 
 PS5GBA is a native PS5 homebrew Game Boy Advance emulator using **mGBA 0.10.5**. It reuses the working PS5SNES frontend while keeping the PS5SX2 shelf, animated game cases, cover glow, reflections, menu sounds and settings panel. The integration and upstream components retain their respective licenses.
 
-**Release status:** the v2 build requires a console retest. This repository contains source; installable application ZIPs must be built and attached separately to a GitHub release. See [RELEASE_NOTES.md](RELEASE_NOTES.md) and [TESTING.md](TESTING.md).
+**Release status:** the v2.1 ROM discovery fix requires a console retest. This repository contains source; installable application ZIPs must be built and attached separately to a GitHub release. See [RELEASE_NOTES.md](RELEASE_NOTES.md) and [TESTING.md](TESTING.md).
 
 ## Features
 
@@ -47,6 +47,11 @@ For an update, replace the application files and restart the app. Preserve the d
 The filesystem helper is restricted to this app's title ID. If filesystem access is unavailable, the helper may require the local ELF loader on port **9021**. A normal retail PS5 cannot run this homebrew app.
 
 ## Add games
+
+**Supported ROM formats:** `.gba` (case-insensitive) and single-GBA-ROM `.zip` archives. SNES extensions such as `.sfc` and `.smc` are not GBA ROMs. A source-code ZIP downloaded from GitHub is not an installable PS5 build.
+
+If games are not listed, check `/data/PS5GBA/logs/boot.log` for `[library]` scan errors. Restart after adding ROMs or request **Rescan library** in All games settings and restart.
+
 
 ### Internal storage
 
