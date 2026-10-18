@@ -35,3 +35,6 @@ gba_bios.bin
 # Legacy inherited verification reports; current status is in TESTING.md
 /gba/VERIFICATION*.txt
 /gba/TESTEN*.txt
+
+# Generated hosted native dependencies (SDK, Lapy and PacBrew)
+/gba/.deps/
