@@ -1,0 +1,84 @@
+# (AI-assisted) PS5GBA source, scanner and release pipeline.
+name: PS5GBA build and release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish compiled ZIP as a GitHub release (main or tag only)'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Source and GBA ROM regression
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Source release hygiene
+        run: python3 gba/tools/check_release.py
+      - name: GBA issue #1 ROM and cache regression
+        run: python3 gba/tools/test_issue1.py
+
+  native:
+    name: Native PS5 build, sign and package
+    needs: verify
+    if: github.event_name != 'pull_request'
+    # Preconfigured Linux runner: LLVM 18, PS5 payload SDK, Vulkan,
+    # filesystem-helper, libnfs and pacbrew dependencies. See BUILDING.md.
+    runs-on: [self-hosted, linux, x64, ps5-build]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify PS5 toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${PS5GBA_DEPS:?Configure PS5GBA_DEPS on the ps5-build runner}"
+          test -d "$PS5GBA_DEPS/PS5_Vulkan"
+          command -v clang-18
+          command -v ld.lld-18
+          command -v cmake
+          command -v ninja
+      - name: Build signed homebrew package
+        shell: bash
+        run: PS5GBA_DEPS="$PS5GBA_DEPS" bash gba/tools/build.sh
+      - name: Validate release artifact and produce checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 gba/tools/verify_package.py
+          cd gba/build-shelf
+          sha256sum PS5GBA-v2.1-by-YAHBALLON.zip > PS5GBA-v2.1-by-YAHBALLON.zip.sha256
+      - name: Upload installable package
+        uses: actions/upload-artifact@v4
+        with:
+          name: PS5GBA-PPSA99209
+          path: |
+            gba/build-shelf/PS5GBA-v2.1-by-YAHBALLON.zip
+            gba/build-shelf/PS5GBA-v2.1-by-YAHBALLON.zip.sha256
+          if-no-files-found: error
+      - name: Publish tag or manually requested release
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            tag="${GITHUB_REF#refs/tags/}"
+          else
+            tag="v2.1.0"
+          fi
+          gh release view "$tag" >/dev/null 2>&1 && { echo "Release $tag already exists; aborting to avoid overwrite"; exit 1; }
+          gh release create "$tag"             gba/build-shelf/PS5GBA-v2.1-by-YAHBALLON.zip             gba/build-shelf/PS5GBA-v2.1-by-YAHBALLON.zip.sha256             --title "PS5GBA $tag by YAHBALLON"             --notes-file RELEASE_NOTES.md             --target "$GITHUB_SHA"
