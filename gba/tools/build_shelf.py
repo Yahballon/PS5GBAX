@@ -49,9 +49,23 @@ vkarchive=out/'vulkan/libps5vk.ps5.a'
 shutil.copy2(vulkan/'build/driver/ps5/libps5vk.ps5.a',vkarchive)
 subprocess.run(['llvm-objcopy-18','--redefine-sym','vkGetInstanceProcAddr=ps5vk_driver_vkGetInstanceProcAddr',str(vkarchive)],check=True)
 vklibs=[vkarchive,vulkan/'.deps/native/vulkan-runtime/lib/libvk_runtime.ps5.a',vulkan/'build/driver/ps5/libpsbc_driver.ps5.a',vulkan/'.deps/native/psbc/lib/libpsbc_support.ps5.a']
+# (AI-assisted) PSBC's make enumerates generated sources before creating them.
+# A clean CI checkout therefore misses NIR/SPIR-V/ACO objects without this
+# supplemental archive. Use the same known-working PS5MesenX build fix.
+environment=dict(os.environ,PS5_VULKAN_DIR=str(vulkan),PS5_PAYLOAD_SDK=str(sdk))
+subprocess.run(['python3',str(nes/'tools/build_generated_psbc.py')],env=environment,check=True)
+generated_psbc=out/'ps5-core/generated-psbc.ps5.a'
+assert generated_psbc.is_file() and generated_psbc.stat().st_size>100
+vklibs.append(generated_psbc)
+subprocess.run(['python3',str(nes/'tools/build_agc_imports.py')],env=environment,check=True)
+agc_dir=out/'ps5-core/agc-imports'
+assert all((agc_dir/name).is_file() for name in ['libSceAgc.so','libSceAgcDriver.so'])
 netlibs=[z/'lib'/f'lib{name}.a' for name in ['curl','psl','ssl','crypto','zstd','z']]
 
 stubs=sorted(str(p) for p in (sdk/'target/lib').glob('*.so') if p.name not in ('libScePosixForWebKit.so','libSceGLSlimVSH.so'))
+# Native AGC modules are provided by the PS5 firmware. Only import stubs
+# are used during the host link; never bundle them with the installer.
+stubs.extend(str(agc_dir/name) for name in ('libSceAgc.so','libSceAgcDriver.so'))
 pie=out/'llvm-pie.elf'
 link=['ld.lld-18','-m','elf_x86_64','-pie','-z','max-page-size=0x4000','-mllvm','-emulated-tls',
       '--hash-style=gnu','-T',str(native/'tooling/native/ps5-pie.ld'),
@@ -71,6 +85,7 @@ subprocess.run(['clang++-18','-std=c++20','-O2','-o',str(tool),
                 *(str(native/'tooling/native'/f'{name}.cpp') for name in
                   ['native_app_builder','elf_object','self_container','sce_module_writer']),'-lz'],check=True)
 subprocess.run([str(tool),'link','--in',str(pie),'--out',str(out/'eboot.elf'),'--stub-dir',str(sdk/'target/lib'),
+                '--stub',str(agc_dir/'libSceAgc.so'),'--stub',str(agc_dir/'libSceAgcDriver.so'),
                 '--module-sdk','0x02000009','--companion-sdk','0x08050001','--file-name','eboot.elf'],check=True)
 subprocess.run(['python3',str(nes/'tools/check_memory.py'),str(out/'eboot.elf')],check=True)
 subprocess.run(['python3',str(project/'ps5/tools/prepare_console_elf.py'),'--input',str(out/'eboot.elf'),
