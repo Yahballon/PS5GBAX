@@ -1,4 +1,4 @@
-# (AI-assisted) PS5GBA source, scanner and release pipeline.
+# (AI-assisted) Native PS5GBA build, check and release using GitHub-hosted Ubuntu.
 name: PS5GBA build and release
 
 on:
@@ -10,13 +10,17 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: 'Publish compiled ZIP as a GitHub release (main or tag only)'
-        required: true
+        description: 'Publish verified ZIP as a GitHub release'
         type: boolean
         default: false
+        required: true
 
 permissions:
   contents: read
+
+concurrency:
+  group: ps5gba-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
@@ -28,57 +32,90 @@ jobs:
         run: python3 gba/tools/check_release.py
       - name: GBA issue #1 ROM and cache regression
         run: python3 gba/tools/test_issue1.py
+      - name: Validate build scripts
+        run: |
+          bash -n gba/tools/bootstrap_native.sh gba/tools/bootstrap_ci.sh gba/tools/setup-pacbrew-dependencies.sh gba/tools/build.sh
+          python3 -m py_compile gba/tools/build_shelf.py gba/tools/build-lapy-helper.py gba/tools/verify_package.py
 
   native:
-    name: Native PS5 build, sign and package
+    name: Build signed PS5 eboot and installable ZIP
     needs: verify
     if: github.event_name != 'pull_request'
-    # Preconfigured Linux runner: LLVM 18, PS5 payload SDK, Vulkan,
-    # filesystem-helper, libnfs and pacbrew dependencies. See BUILDING.md.
-    runs-on: [self-hosted, linux, x64, ps5-build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
     permissions:
       contents: write
+    env:
+      PS5GBA_DEPS: ${{ github.workspace }}/.cache/ps5-build
+      PS5_VULKAN_DIR: ${{ github.workspace }}/.cache/ps5-build/PS5_Vulkan
+      PS5_PAYLOAD_SDK: ${{ github.workspace }}/.cache/ps5-build/PS5_Vulkan/.deps/native/ps5-payload-sdk
+      LIBNFS_PREFIX: ${{ github.workspace }}/.cache/ps5-build/libnfs-install
+      LIBZ_PREFIX: ${{ github.workspace }}/gba/.deps/pacbrew/v0.40.2/sysroot/user/homebrew
+      PS5_CLANG: clang-18
+      BUILD_JOBS: '4'
+      USE_CCACHE: '0'
     steps:
       - uses: actions/checkout@v4
-      - name: Verify PS5 toolchain
+      - name: Install PS5 LLVM 18, Mesa and cross-build prerequisites
         shell: bash
         run: |
           set -euo pipefail
-          : "${PS5GBA_DEPS:?Configure PS5GBA_DEPS on the ps5-build runner}"
-          test -d "$PS5GBA_DEPS/PS5_Vulkan"
-          command -v clang-18
-          command -v ld.lld-18
-          command -v cmake
-          command -v ninja
-      - name: Build signed homebrew package
-        shell: bash
-        run: PS5GBA_DEPS="$PS5GBA_DEPS" bash gba/tools/build.sh
-      - name: Validate release artifact and produce checksum
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git ca-certificates curl wget tar unzip zip rsync build-essential make \
+            clang-18 lld-18 llvm-18 llvm-18-dev llvm-18-tools \
+            cmake ninja-build pkg-config meson glslang-tools \
+            bison flex zstd libzstd-dev libssl-dev zlib1g-dev \
+            libx11-dev libgl1-mesa-dev libclc-18 \
+            python3 python3-venv python3-dev python3-mako python3-numpy python3-pil
+          echo '/usr/lib/llvm-18/bin' >> "$GITHUB_PATH"
+          python3 -m venv --system-site-packages "$RUNNER_TEMP/ps5gba-tools"
+          "$RUNNER_TEMP/ps5gba-tools/bin/python" -m pip install --disable-pip-version-check 'meson==1.9.2'
+          echo "$RUNNER_TEMP/ps5gba-tools/bin" >> "$GITHUB_PATH"
+          clang-18 --version
+          meson --version
+      - name: Prepare pinned Vulkan, payload SDK, libnfs and PacBrew
+        timeout-minutes: 305
+        run: bash gba/tools/bootstrap_ci.sh
+      - name: Native signed PS5 compile and package
+        timeout-minutes: 35
+        run: bash gba/tools/build.sh
+      - name: Verify install ZIP and produce SHA-256
         shell: bash
         run: |
           set -euo pipefail
           python3 gba/tools/verify_package.py
+          cp gba/build-shelf/PS5GBA-v2.1-by-YAHBALLON.zip gba/build-shelf/PPSA99209.zip
           cd gba/build-shelf
-          sha256sum PS5GBA-v2.1-by-YAHBALLON.zip > PS5GBA-v2.1-by-YAHBALLON.zip.sha256
-      - name: Upload installable package
+          sha256sum PPSA99209.zip > PPSA99209.zip.sha256
+          unzip -tq PPSA99209.zip
+      - name: Upload actual compiled PS5 package
         uses: actions/upload-artifact@v4
         with:
-          name: PS5GBA-PPSA99209
+          name: PS5GBAX-v2.1.0-PPSA99209
           path: |
-            gba/build-shelf/PS5GBA-v2.1-by-YAHBALLON.zip
-            gba/build-shelf/PS5GBA-v2.1-by-YAHBALLON.zip.sha256
+            gba/build-shelf/PPSA99209.zip
+            gba/build-shelf/PPSA99209.zip.sha256
           if-no-files-found: error
-      - name: Publish tag or manually requested release
-        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main')
-        shell: bash
+      - name: Publish verified GitHub Release
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
           set -euo pipefail
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             tag="${GITHUB_REF#refs/tags/}"
           else
             tag="v2.1.0"
           fi
-          gh release view "$tag" >/dev/null 2>&1 && { echo "Release $tag already exists; aborting to avoid overwrite"; exit 1; }
-          gh release create "$tag"             gba/build-shelf/PS5GBA-v2.1-by-YAHBALLON.zip             gba/build-shelf/PS5GBA-v2.1-by-YAHBALLON.zip.sha256             --title "PS5GBA $tag by YAHBALLON"             --notes-file RELEASE_NOTES.md             --target "$GITHUB_SHA"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "::error::Release $tag exists; refusing to silently overwrite it."
+            exit 1
+          fi
+          gh release create "$tag" \
+            gba/build-shelf/PPSA99209.zip \
+            gba/build-shelf/PPSA99209.zip.sha256 \
+            --title "PS5GBA $tag by YAHBALLON" \
+            --notes-file RELEASE_NOTES.md \
+            --target "$GITHUB_SHA"
