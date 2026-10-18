@@ -99,7 +99,7 @@ if (nes/'licenses').exists():
 revision_file=core/'UPSTREAM_REVISION.txt'
 if revision_file.exists():commit=revision_file.read_text().strip()
 else:commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=core,text=True).strip()
-manifest={'ai_assisted':True,'name':'PS5GBA v2 by YAHBALLON','title':'PPSA99209','core':'mGBA 0.10.5 portable GBA',
+manifest={'ai_assisted':True,'name':'PS5GBA v2.1 by YAHBALLON','title':'PPSA99209','core':'mGBA 0.10.5 portable GBA',
           'frontend':'Original PS5SX2 cover-flow frontend',
           'frontend_source_sha256':{str(p.relative_to(project)):hashlib.sha256(p.read_bytes()).hexdigest() for p in cpp_sources if '/ps5/frontend/' in str(p)},
           'core_commit':commit,'core_source':'https://github.com/mgba-emu/mgba','console_tested':False,
@@ -107,7 +107,7 @@ manifest={'ai_assisted':True,'name':'PS5GBA v2 by YAHBALLON','title':'PPSA99209'
                    if p.is_file() and p.name != 'build-manifest.json'}}
 (app/'build-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
 shutil.copy2(project/'INSTALL.md',out/'package/INSTALL.md')
-bundle=out/'PS5GBA-v2-Covers-Performance-Defaults-by-YAHBALLON.zip'
+bundle=out/'PS5GBA-v2.1-by-YAHBALLON.zip'
 with zipfile.ZipFile(bundle,'w',zipfile.ZIP_DEFLATED) as archive:
     for path in sorted(app.rglob('*')):
         if path.is_file():archive.write(path,Path('PPSA99209')/path.relative_to(app))
