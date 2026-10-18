@@ -21,7 +21,7 @@
    ZIP as a GitHub release asset. GitHub's automatic source ZIP is source only
    and cannot be installed as the application.
 
-CI source and ROM regression checks run on GitHub-hosted Ubuntu. Native PS5 signing and release publication require a configured self-hosted Linux runner labelled `ps5-build` with `PS5GBA_DEPS` set to the prepared SDK/dependency folder. New version tags `v*` trigger building, artifact validation and publication; a manual workflow dispatch from `main` with `publish=true` can publish tag `v2.1.0`. The workflow refuses to overwrite an existing release. An unavailable runner leaves the build queued; do not claim a release exists until GitHub Actions reports success. The PS5 console retest remains a separate task.
+CI source and ROM regression checks run on GitHub-hosted Ubuntu 24.04. Native compilation also runs on GitHub-hosted Ubuntu and bootstraps the public PS5 Vulkan, Payload SDK, PacBrew, libnfs and title-bound Lapy dependencies. A push to `main` builds and publishes the signed ZIP as `v2.1.0` only after validation; tags `v*` and manual `workflow_dispatch` are supported. The workflow refuses to overwrite an existing release. The initial graphics toolchain build may take significant runner time; if dependencies fail, the job fails without publishing a fake package. A successful CI build still requires on-console verification.
 
 Generated application ZIPs are kept in ignored build/dist folders and are not included in Git source archives. Do not describe a
 release as verified merely because an earlier package passed checks.
