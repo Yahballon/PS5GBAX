@@ -2,7 +2,7 @@
 
 (AI-assisted) Use WSL Ubuntu/Linux, Clang/LLVM 18, Python 3, CMake, Ninja, make and zlib development headers. Source layout: `gba/src/` is the adapter/runtime; `gba/third_party/mgba/` is the pinned upstream core; `ps5/frontend/` is the reused native UI/renderer; `ps5/proto/native/tooling/` contains the native app writer.
 
-Use the same prepared dependency set as PS5SNES: the PS5 Payload SDK under `PS5_Vulkan/.deps/native/ps5-payload-sdk`, the native Vulkan driver/support archives and runtime, `filesystem-helper`/Lapy with pacbrew curl/OpenSSL/zlib libraries, and `libnfs-install`. These external SDK dependencies are not bundled into the source ZIP. No source files from PS5SNES are required to build this project.
+Hosted CI can bootstrap the public dependencies with `bash gba/tools/bootstrap_ci.sh`; native compilation still requires a full PS5-specific SDK/toolchain. For a manual local build, use the same prepared dependency set as PS5SNES: the PS5 Payload SDK under `PS5_Vulkan/.deps/native/ps5-payload-sdk`, the native Vulkan driver/support archives and runtime, `filesystem-helper`/Lapy with pacbrew curl/OpenSSL/zlib libraries, and `libnfs-install`. These external SDK dependencies are not bundled into the source ZIP. No source files from PS5SNES are required to build this project.
 
 ```sh
 PS5GBA_DEPS=/path/to/prepared/ps5-build bash gba/tools/build.sh
@@ -17,6 +17,8 @@ GLSLANG_VALIDATOR=/path/to/glslangValidator bash ps5/frontend/build_shaders.sh
 ```
 
 Build output: `gba/build-shelf/PS5GBA-v2.1-by-YAHBALLON.zip`. Upload this generated application ZIP as a release asset; no prebuilt application is included in this source checkout. See [RELEASING.md](RELEASING.md) for the release checklist. The package includes the application-specific elevation helper, `eboot.bin`, metadata/icon, `sce_module/libc.prx` and license notices.
+
+GitHub Actions uses Ubuntu 24.04 with automatic PS5 Vulkan, pinned PS5 Payload SDK, PacBrew v0.40.2, libnfs 5.0.3 and a pinned Lapy title-bound helper. Successful source checks alone are NOT a compiled release. A release is published only after the actual signed ZIP has passed `gba/tools/verify_package.py` and includes its SHA-256 checksum. First-time driver compilation may be long and depends on the public upstream dependencies being accessible.
 
 Host tests (Clang/LLVM 18, Mesa Vulkan/llvmpipe and zlib required):
 
