@@ -35,7 +35,7 @@ jobs:
       - name: Validate build scripts
         run: |
           bash -n gba/tools/bootstrap_native.sh gba/tools/bootstrap_ci.sh gba/tools/setup-pacbrew-dependencies.sh gba/tools/build.sh
-          python3 -m py_compile gba/tools/build_shelf.py gba/tools/build-lapy-helper.py gba/tools/verify_package.py
+          python3 -m py_compile gba/tools/build_shelf.py gba/tools/build-lapy-helper.py gba/tools/verify_package.py gba/tools/build_generated_psbc.py gba/tools/build_agc_imports.py
 
   native:
     name: Build signed PS5 eboot and installable ZIP
