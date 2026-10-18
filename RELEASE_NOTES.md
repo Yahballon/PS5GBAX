@@ -1,8 +1,9 @@
-# PS5GBA v2 by YAHBALLON
+# PS5GBA v2.1 by YAHBALLON
 
 (AI-assisted) Native PS5 Game Boy Advance emulator using mGBA 0.10.5.
 App ID: **PPSA99209**.
 
+- Fix Issue #1: correct cached `.gba` extension filtering (including `.GBA`), recognize internal `games/` and `roms/` folders, and fix old SNES-format text in the empty library screen.
 - Automatic Libretro GBA box-art matching, disk caching and R2 cover refresh.
 - Default graphics: 4K output, 4K ENHANCED, Stretch, Integer Scaling on,
   and VSync off. Existing explicit settings and saves are preserved.
@@ -21,7 +22,7 @@ No games or proprietary BIOS images are included.
 
 Earlier native builds and host tests were reported as passing. These historical
 results have not been rerun for this source checkout. Smooth gameplay was
-reported with the selected graphics configuration; the v2 release build still
+reported with the selected graphics configuration; the v2.1 release build still
 requires a PS5 console retest. General firmware compatibility and sustained
 GPU performance across games have not been established. See `TESTING.md` and
 `RELEASING.md` before publishing.
