@@ -564,9 +564,9 @@ void App::Build(FrameDesc& f, const std::string& clock)
 	else
     {
         m_fonts->AddText(ui, Tr(Str::NoGames), W * 0.5f, H * 0.5f-70.0f*k, 40.0f*k, white, 0.4f, Fonts::Center);
-        m_fonts->AddText(ui, "/data/PS5GBA/games/", W*0.5f,H*0.5f,28.0f*k,white,0.4f,Fonts::Center);
+        m_fonts->AddText(ui, "/data/PS5GBA/games/ or /roms/", W*0.5f,H*0.5f,28.0f*k,white,0.4f,Fonts::Center);
         m_fonts->AddText(ui, "/mnt/usb0/homebrew/PS5GBA/games/", W*0.5f,H*0.5f+45.0f*k,28.0f*k,white,0.4f,Fonts::Center);
-        m_fonts->AddText(ui, ".sfc / .smc / .swc / .fig / .zip", W*0.5f,H*0.5f+100.0f*k,24.0f*k,white,0.4f,Fonts::Center);
+        m_fonts->AddText(ui, ".gba / .GBA / .zip (one GBA ROM per ZIP)", W*0.5f,H*0.5f+100.0f*k,24.0f*k,white,0.4f,Fonts::Center);
     }
 	FadeRange(ui, title_begin, ui.size(), 1.0f - sheet_e); // vk-285-114: the sheet shows the title itself
 
