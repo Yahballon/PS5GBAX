@@ -35,7 +35,7 @@ bool ReadLibrary(const std::string& file,const std::vector<std::string>& directo
         const auto slash=path.find_last_of('/'),dot=path.find_last_of('.');
         if(dot==path.npos||dot<=slash)return false;
         auto extension=path.substr(dot);for(char& c:extension)if(c>='A'&&c<='Z')c+=32;
-        if(extension!=".zip"&&extension!=".sfc"&&extension!=".smc"&&extension!=".swc"&&extension!=".fig")return false;
+        if(extension!=".zip"&&extension!=".gba")return false;
         result.push_back({path,path.substr(slash+1,dot-slash-1),bytes});
     }
     if(at!=data.size()-4)return false;games=std::move(result);return true;
