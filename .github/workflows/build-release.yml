@@ -34,6 +34,7 @@ jobs:
         run: |
           python3 gba/tools/test_issue1.py
           python3 tests/test_gbaxy_ui.py
+          python3 tests/test_gbaxy_cover_sources.py
           g++ -std=c++20 -O2 -Wall -Wextra -Werror -Ips5/frontend tests/test_gbaxy_cover_geometry.cpp -o /tmp/gbaxy-geometry
           /tmp/gbaxy-geometry
       - name: Validate build scripts
