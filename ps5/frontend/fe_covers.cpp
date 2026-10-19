@@ -110,7 +110,7 @@ bool IsCoverFile(const std::string& path)
 bool RecentlyMissing(const std::string& cache_dir, const std::string& serial)
 {
 	struct stat st = {};
-	return stat((cache_dir + "/" + serial + ".gbacovers-libretro-v2.missing").c_str(), &st) == 0 &&
+	return stat((cache_dir + "/" + serial + ".snescovers-v6.missing").c_str(), &st) == 0 &&
 		   std::time(nullptr) - st.st_mtime < 14 * 24 * 3600;
 }
 
@@ -444,7 +444,7 @@ void CoverService::PaintSpine(const Fonts& fonts, const GameInfo& g, CoverImage&
 	std::vector<uint8_t> a;
 	int tw, th, base;
 	// "PlayStation 2" at the top, the title, and the serial at the foot, all reading downwards.
-	fonts.Raster("Nintendo GBA", 25.0f, a, tw, th, base);
+	fonts.Raster("Nintendo SNES", 25.0f, a, tw, th, base);
 	DrawAlpha(out, a, tw, th, (W - th) / 2, 40, 0xe8e8e8, true);
 	const int title_top = 60 + tw + 70, title_bottom = H - 190;
 	float px = 44.0f;
@@ -493,7 +493,7 @@ void CoverService::PaintPlaceholder(const Fonts& fonts, const GameInfo& g, Cover
 	}
 	std::vector<uint8_t> a;
 	int tw, th, base;
-	fonts.Raster("Nintendo GBA", 19.0f, a, tw, th, base);
+	fonts.Raster("Nintendo SNES", 19.0f, a, tw, th, base);
 	DrawAlpha(out, a, tw, th, 12, 18 - base + 6, 0xffffff, false);
 	const std::vector<std::string> lines = Wrap(fonts, g.title, 38.0f, W - 44.0f, 5);
 	const float line_h = 46.0f;
@@ -586,6 +586,17 @@ void CoverService::SetSelected(int selected)
 	m_selected = selected;
 }
 
+CoverProgress CoverService::Progress() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    CoverProgress p;
+    p.games=static_cast<int>(m_games.size());
+    p.scanned=p.games;p.planned=m_download_total;p.attempted=m_download_done;
+    p.downloaded=m_download_saved;p.failed=m_download_failed;
+    p.transferring=m_busy;p.offline=m_offline;
+    p.done=m_finished.load() || (!m_busy && m_download_total<=m_download_done);
+    p.current=m_current_cover;
+    return p;
+}
 std::string CoverService::Status() const
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
@@ -647,7 +658,7 @@ static int FetchCover(const GameInfo& game,const CoverConfig& cfg,const Download
  auto urls=cfg.resolve_urls?cfg.resolve_urls(game):std::vector<std::string>{cfg.url_template};
  int status=404,other_error=0;
  for(auto url:urls){if(stop&&*stop)break;auto at=url.find("${serial}");if(at!=url.npos)url.replace(at,9,game.serial);
-  at=url.find("${title}");if(at!=url.npos)url.replace(at,8,gba::CoverEncode(game.stem));
+  at=url.find("${title}");if(at!=url.npos)url.replace(at,8,snes::CoverEncode(game.stem));
   used=url;bytes.clear();status=download(url,bytes);
   if(status<0&&!(stop&&*stop)){bytes.clear();status=download(url,bytes);}
   if(status==200&&CoverService::Decode(bytes,1024,image)){std::printf("[covers] matched %s -> %s\n",game.file.c_str(),url.c_str());return 200;}
@@ -663,12 +674,13 @@ bool CoverService::DownloadCover(int index, CoverImage& out)
 	if (m_offline || m_stop)
 		return false;
 	const std::string cached = m_cfg.cache_dir + "/" + g.serial + ".jpg";
-	const std::string missing = m_cfg.cache_dir + "/" + g.serial + ".gbacovers-libretro-v2.missing";
+	const std::string missing = m_cfg.cache_dir + "/" + g.serial + ".snescovers-v6.missing";
 	std::vector<uint8_t> bytes;
 	std::string url;
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		m_busy = true;
+        m_current_cover=g.title;
 	}
 	int status=FetchCover(g,m_cfg,m_download,bytes,out,url,&m_stop);
 	bool ok = false;
@@ -693,6 +705,8 @@ bool CoverService::DownloadCover(int index, CoverImage& out)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		m_download_done++;
+        if(ok)++m_download_saved;else ++m_download_failed;
+        m_current_cover.clear();
 		if (ok)
 			m_download_status = saved ? "Covers: " + std::to_string(m_download_done) + "/" + std::to_string(m_download_total) + " processed" : "Cover shown; cache save failed";
 		else if (!m_stop)
@@ -750,7 +764,7 @@ int CoverService::Prefetch(const std::vector<GameInfo>& games, const std::vector
 		if (status == 200 && !probe.rgba.empty())
 			ok = WriteFileAtomic(cfg.cache_dir + "/" + g.serial + ".jpg", bytes);
 		else if (status == 404)
-			WriteFileAtomic(cfg.cache_dir + "/" + g.serial + ".gbacovers-libretro-v2.missing", std::vector<uint8_t>{'4', '0', '4', '\n'});
+			WriteFileAtomic(cfg.cache_dir + "/" + g.serial + ".snescovers-v6.missing", std::vector<uint8_t>{'4', '0', '4', '\n'});
 		std::printf("[frontend] prefetch %s: %d%s\n", g.serial.c_str(), status,
 			ok ? " (saved)" : (status == 200 ? " (not an image; not kept)" : ""));
 		std::fflush(stdout);
@@ -789,7 +803,7 @@ void CoverService::RunWindow()
         {std::lock_guard<std::mutex> lock(m_mutex);if(!m_refresh_requests.empty()){refresh=m_refresh_requests.front();m_refresh_requests.pop_front();m_offline=false;++m_download_total;}}
         if(refresh>=0){
             // (AI-assisted) Bypass cached artwork and old 404 markers, retaining the old image on failure.
-            const auto& game=m_games[refresh];unlink((m_cfg.cache_dir+"/"+game.serial+".gbacovers-libretro-v2.missing").c_str());
+            const auto& game=m_games[refresh];unlink((m_cfg.cache_dir+"/"+game.serial+".snescovers-v6.missing").c_str());
             CoverImage updated;std::printf("[covers] refresh selected: %s\n",game.title.c_str());
             const bool okay=DownloadCover(refresh,updated);
             if(okay){updated.game=refresh;updated.kind=CoverImage::Cover;if(!deliver(updated))break;finder=CoverFinder(m_cfg.manual_dir,m_cfg.cache_dir);local[refresh]=true;want[refresh]=false;}
