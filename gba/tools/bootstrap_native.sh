@@ -21,8 +21,10 @@ test -s runtime/libc.prx
 # third_party source tree, so it cannot feed PS5_Vulkan's shader compiler.
 sdk_checkout="$base/ps5-opengl-sdk-0.3.0"
 if [[ ! -d "$sdk_checkout/.git" ]]; then
+  # Accessible public mirror of the same original v0.3.0 commit.
+  # The exact SHA check immediately below prevents silent SDK drift.
   git clone -q --depth=1 --branch v0.3.0 \
-    https://github.com/blackbearreloaded/ps5-opengl.git "$sdk_checkout"
+    https://github.com/mihawk-99/ps5-opengl.git "$sdk_checkout"
 fi
 test "$(git -C "$sdk_checkout" rev-parse HEAD)" = 6cb291abea32281571c49705735046425cf000fd
 # Pre-fetch the large Mesa archive with resumable HTTP retries. Upstream's
