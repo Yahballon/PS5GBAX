@@ -65,6 +65,10 @@ struct FrameDesc
 	float floor_y = -1, reflect_strength = 0.3f, reflect_falloff = 2.0f;
 	BgParams bg = {};
 	VkDescriptorSet backdrop_set = VK_NULL_HANDLE; // selected cover, or fallback
+	// Optional first UI quad can be textured independently from the font atlas.
+	// Used by the active GBA framebuffer (and the splash logo).
+	VkDescriptorSet game_set = VK_NULL_HANDLE;
+	uint32_t game_vertices = 0;
 	std::vector<BoxDraw> reflections;
 	std::vector<BoxDraw> boxes;
 	HaloDraw halo;

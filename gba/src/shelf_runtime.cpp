@@ -73,10 +73,24 @@ bool ShelfRuntime::Build(fe::Renderer& renderer,fe::FrameDesc& frame,uint32_t ra
     // (AI-assisted) Deferred texture retirement uses the existing renderer's fenced frame slots.
     // Continuous menu/game transitions still need proper testing on PS5 hardware.
     if(changed&&!core.pixels.empty()) {
-        texture_slot=(texture_slot+1)%3;auto*& texture=game_textures[texture_slot];
-        bool okay=true;if(!texture){texture=renderer.CreateTexture(core.width,core.height,VK_FORMAT_R8G8B8A8_UNORM,core.pixels.data());if(texture)game_sets[texture_slot]=renderer.AllocTextureSet(texture,texture,texture);okay=texture&&game_sets[texture_slot];}
-        else okay=renderer.UpdateTexture(texture,VK_FORMAT_R8G8B8A8_UNORM,core.pixels.data());
-        if(!okay){error="GBA frame upload failed";Stop(renderer);return false;}
+        // The newer Porpoise renderer has no in-place texture upload API.
+        // Create a new texture+set, then retire the previous frame's resources
+        // using its GPU fences. Reusing the same image while a frame is in
+        // flight would corrupt pixels on the console.
+        const unsigned next=(texture_slot+1)%3;
+        fe::Texture* fresh=renderer.CreateTexture(core.width,core.height,
+            VK_FORMAT_R8G8B8A8_UNORM,core.pixels.data());
+        if(!fresh){error="GBA frame texture creation failed";Stop(renderer);return false;}
+        VkDescriptorSet fresh_set=renderer.AllocTextureSet(fresh,fresh,fresh);
+        if(!fresh_set){
+            renderer.DestroyTexture(fresh);
+            error="GBA frame descriptor creation failed";Stop(renderer);return false;
+        }
+        if(game_sets[next])renderer.FreeTextureSet(game_sets[next]);
+        if(game_textures[next])renderer.DestroyTexture(game_textures[next]);
+        game_sets[next]=fresh_set;
+        game_textures[next]=fresh;
+        texture_slot=next;
         ++fps_frames;if(now-fps_time>=1){measured_fps=fps_frames/float(now-fps_time);fps_frames=0;fps_time=now;}
     }
     frame=fe::FrameDesc{};frame.fade=1;
