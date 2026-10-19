@@ -4,13 +4,20 @@
 </p>
 **Game Boy Advance games on PS5 with a native neon 3D CoverFlow.**
 
-**v2.2.0 — by YAHBALLON** · **App ID: PPSA99209**
+**v2.2.1 — by YAHBALLON** · **App ID: PPSA99209**
 
 PS5GBA is a native PS5 homebrew Game Boy Advance emulator using **mGBA 0.10.5**. It reuses the working PS5SNES frontend while keeping the PS5SX2 shelf, animated game cases, cover glow, reflections, menu sounds and settings panel. The integration and upstream components retain their respective licenses.
 
 **Release status:** the v2.1 ROM discovery fix requires a console retest. This repository contains source; installable application ZIPs must be built and attached separately to a GitHub release. See [RELEASE_NOTES.md](RELEASE_NOTES.md) and [TESTING.md](TESTING.md).
 
-## GBAXY v2.2.0 — What's new
+## GBAXY v2.2.1 — Native PS5 close crash fixed
+
+- **Safe exit:** The main-menu Circle → Cross confirmation now asks the PS5 shell to close the title with `sceSystemServiceLoadExec("exit", nullptr)` instead of libc `exit(0)`, which caused **SIGSYS (signal 12)** on PS5.
+- **CRT fallback:** Also intercepts unexpected normal `main()` returns to prevent a second SIGSYS crash.
+- **No loss of data:** Title ID `PPSA99209`, game folders, cover cache, saves and themes are unchanged.
+- **Verification:** Builds and host tests validate the corrected exit code; hardware exit behavior must be retested on a PS5.
+
+## GBAXY v2.2.0 — Previous release
 
 **GBA cover download:** Local artwork and the existing cache take priority. Online lookup now tries the [Libretro GBA Named Boxarts index](https://thumbnails.libretro.com/Nintendo%20-%20Game%20Boy%20Advance/Named_Boxarts/) and the upstream Libretro GitHub mirror, with up to three No-Intro region/name variations per game. Missing thumbnails are fetched on demand and cached locally.
 

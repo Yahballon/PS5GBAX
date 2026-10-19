@@ -1,7 +1,7 @@
 {
   "name": "GBAXY",
-  "version": "2.2.0",
-  "releaseTag": "v2.2.0",
+  "version": "2.2.1",
+  "releaseTag": "v2.2.1",
   "titleId": "PPSA99209",
   "core": "mGBA 0.10.5",
   "frontend": "Native adaptive Porpoise CoverFlow with five GBA themes",

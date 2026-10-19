@@ -77,6 +77,8 @@ int sceUserServiceGetInitialUser(int32_t* userId);
 int sceKernelConvertUtcToLocaltime(time_t utc, time_t* local, KernelTimesec* sec, uint64_t* dst_sec);
 int sceSystemServiceParamGetInt(int param, int* value);
 int sceSystemServiceHideSplashScreen(void);
+// Native PS5 title exit: implemented by main_shelf.cpp, not the libc syscall.
+[[noreturn]] void gbaxy_exit_to_shell(const char* reason);
 
 // libSceNet, libSceSsl and libSceHttp2 as the payload SDK's http2_get sample declares them. The
 // system loads all three into every app already, so linking them adds nothing at start-up.
@@ -1830,7 +1832,11 @@ std::string orbis_frontend_run(const OrbisFrontendPaths& paths, const char* buil
 		delete mixer;
 	}
 
-    if(app.ExitRequested()) { std::printf("[GBAXY] Native resources closed\n"); std::fflush(stdout); ::exit(0); }
+    if (app.ExitRequested()) {
+        std::printf("[GBAXY] Native resources closed; requesting title exit from system shell\n");
+        std::fflush(nullptr);
+        gbaxy_exit_to_shell("CoverFlow exit confirmed"); // never returns; libc exit() is SIGSYS
+    }
 	if (!picked)
 	{
 		std::printf("[frontend] stopped without a pick; the plain list takes over\n");

@@ -1,3 +1,15 @@
+# GBAXY v2.2.1 by YAHBALLON
+
+## Fix: PS5 SIGSYS crash when closing GBAXY
+
+- Replace the C library `exit(0)` in the native CoverFlow close path with the PS5 system-service request `sceSystemServiceLoadExec("exit", nullptr)` **after resource shutdown**.
+- Override `catchReturnFromMain` in the native CRT so an ordinary return from `main()` cannot fall through to the forbidden libc exit syscall.
+- When the system service declines a shutdown, log the return code to `/data/PS5GBA/logs/boot.log` and wait for the shell instead of crashing.
+- Keep `PPSA99209`, existing game ROMs, saves, settings, cache, GBA core and Porpoise UI unchanged.
+
+**Validation:** CI compilation and tests do not prove the fix on real PS5 hardware. Verify pressing ○ then × closes without the CE-10 / SIGSYS error.
+
+---
 # PS5GBA v2.1 by YAHBALLON
 
 (AI-assisted) Native PS5 Game Boy Advance emulator using mGBA 0.10.5.
