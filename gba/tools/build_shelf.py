@@ -28,8 +28,9 @@ cpp=[*base,'-std=c++20','-fno-exceptions','-fno-rtti','-pthread','-DORBIS_NFS=1'
      '-DFE_FONT_DIR="'+str(project/'bin/resources/fonts')+'"','-DFE_ASSET_DIR="'+str(project/'ps5/frontend/assets')+'"','-I'+str(nes/'src'),'-I'+str(project/'ps5/frontend'),
      '-I'+str(project/'ps5/coreorbis/orbis-shims/filesystem-elevation'),*incs]
 cpp_sources=[nes/'src'/n for n in ['core_session.cpp','games.cpp','shelf_games.cpp','shelf_runtime.cpp','main_shelf.cpp','loading.cpp','library_cache.cpp','controller_bindings.cpp']]
-cpp_sources += [project/'ps5/frontend'/f'{name}.cpp' for name in ['fe_app','fe_covers','fe_renderer','fe_sound','fe_text','fe_vk','fe_ps5','fe_web','fe_i18n','fe_settings','fe_options']]
+cpp_sources += [project/'ps5/frontend'/f'{name}.cpp' for name in ['fe_app','fe_covers','fe_renderer','fe_sound','fe_text','fe_vk','fe_ps5','fe_web','fe_i18n','fe_settings','fe_options','fe_exact_porpoise']]
 cpp_sources += [project/'ps5/frontend/fe_nfs.cpp',project/'ps5/coreorbis/orbis-shims/filesystem-elevation/src/elevation.cpp']
+cpp_sources += [project/'ps5/porpoise_original/src/ui_gfx.cpp']
 cpp_sources += [native/'tooling/native'/f'{name}.cpp' for name in ['app_crt','app_cpp_runtime']]
 for src in cpp_sources:
     obj=out/'obj'/f'{src.stem}.o';obj.parent.mkdir(exist_ok=True)
@@ -114,17 +115,17 @@ if (nes/'licenses').exists():
 revision_file=core/'UPSTREAM_REVISION.txt'
 if revision_file.exists():commit=revision_file.read_text().strip()
 else:commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=core,text=True).strip()
-manifest={'ai_assisted':True,'name':'PS5GBA v2.1 by YAHBALLON','title':'PPSA99209','core':'mGBA 0.10.5 portable GBA',
-          'frontend':'Original PS5SX2 cover-flow frontend',
+manifest={'ai_assisted':True,'name':'GBAXY v2.2.0 by YAHBALLON','title':'PPSA99209','core':'mGBA 0.10.5 portable GBA',
+          'frontend':'GBAXY native Porpoise 3D CoverFlow (5 themes)',
           'frontend_source_sha256':{str(p.relative_to(project)):hashlib.sha256(p.read_bytes()).hexdigest() for p in cpp_sources if '/ps5/frontend/' in str(p)},
           'core_commit':commit,'core_source':'https://github.com/mgba-emu/mgba','console_tested':False,
           'files':{str(p.relative_to(app)):hashlib.sha256(p.read_bytes()).hexdigest() for p in app.rglob('*')
                    if p.is_file() and p.name != 'build-manifest.json'}}
 (app/'build-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
 shutil.copy2(project/'INSTALL.md',out/'package/INSTALL.md')
-bundle=out/'PS5GBA-v2.1-by-YAHBALLON.zip'
+bundle=out/'GBAXY-v2.2.0-by-YAHBALLON.zip'
 with zipfile.ZipFile(bundle,'w',zipfile.ZIP_DEFLATED) as archive:
     for path in sorted(app.rglob('*')):
         if path.is_file():archive.write(path,Path('PPSA99209')/path.relative_to(app))
     archive.write(project/'INSTALL.md','INSTALL.md')
-print('PS5GBA test package (AI-assisted):',bundle,flush=True)
+print('GBAXY signed native test package:',bundle,flush=True)

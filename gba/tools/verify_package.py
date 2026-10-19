@@ -6,7 +6,7 @@ import json
 import zipfile
 
 root = Path(__file__).resolve().parents[2]
-package = root / "gba/build-shelf/PS5GBA-v2.1-by-YAHBALLON.zip"
+package = root / "gba/build-shelf/GBAXY-v2.2.0-by-YAHBALLON.zip"
 required = {
     "PPSA99209/eboot.bin",
     "PPSA99209/sce_sys/param.json",

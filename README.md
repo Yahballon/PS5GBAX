@@ -1,14 +1,24 @@
-# PS5GBA is a passion project, not a piracy project.
+# GBAXY — Game Boy Advance for PS5
 <p align="center">
-  <img src="screenshots/background.png" alt="PS5NES game shelf">
+  <img src="screenshots/background.png" alt="GBAXY 3D CoverFlow">
 </p>
-**Game Boy Advance games on your PS5, with the original PS5SX2 cover-flow interface.**
+**Game Boy Advance games on PS5 with a native neon 3D CoverFlow.**
 
-**v2.1 — by YAHBALLON** · **App ID: PPSA99209**
+**v2.2.0 — by YAHBALLON** · **App ID: PPSA99209**
 
 PS5GBA is a native PS5 homebrew Game Boy Advance emulator using **mGBA 0.10.5**. It reuses the working PS5SNES frontend while keeping the PS5SX2 shelf, animated game cases, cover glow, reflections, menu sounds and settings panel. The integration and upstream components retain their respective licenses.
 
 **Release status:** the v2.1 ROM discovery fix requires a console retest. This repository contains source; installable application ZIPs must be built and attached separately to a GitHub release. See [RELEASE_NOTES.md](RELEASE_NOTES.md) and [TESTING.md](TESTING.md).
+
+## GBAXY v2.2.0 — What's new
+
+- **GBAXY identity** in the PS5 home screen, CoverFlow and animated startup screen.
+- **Adaptive 3D game cases**: genuine GBA portrait box art stays portrait; square, custom and landscape covers retain their real proportions, with uncropped artwork and reflections.
+- **Five exclusive themes**, all configurable under Settings → Appearance → Theme: Advance Wave (electric blue/teal), Pixel Mint (lime/green), Lava Pulse (orange/red), Silver Core (silver/white) and Cosmic Violet (purple/magenta).
+- **Advance Current**: original animated loading screen with five flowing pixel ribbons, a moving scanlight, handheld-inspired center emblem and real GBA ROM scan counts.
+- **Exit confirmation**: press ○ from the game library, then × to exit or ○ to cancel; does not trigger during gameplay.
+- All existing mGBA emulator modes, 4K graphics, saves, controls, NFS, ROM paths and cached Libretro GBA artwork are retained.
+- **Title ID PPSA99209 is unchanged**, as is the existing data folder `/data/PS5GBA/`.
 
 ## Features
 

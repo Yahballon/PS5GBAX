@@ -1,9 +1,9 @@
 # (AI-assisted) Native PS5GBA build, check and release using GitHub-hosted Ubuntu.
-name: PS5GBA build and release
+name: GBAXY Native Build & Release
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/gbaxy-v2.2.0]
     tags: ['v*']
   pull_request:
     branches: [main]
@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ps5gba-${{ github.ref }}
+  group: gbaxy-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -31,7 +31,11 @@ jobs:
       - name: Source release hygiene
         run: python3 gba/tools/check_release.py
       - name: GBA issue #1 ROM and cache regression
-        run: python3 gba/tools/test_issue1.py
+        run: |
+          python3 gba/tools/test_issue1.py
+          python3 tests/test_gbaxy_ui.py
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror -Ips5/frontend tests/test_gbaxy_cover_geometry.cpp -o /tmp/gbaxy-geometry
+          /tmp/gbaxy-geometry
       - name: Validate build scripts
         run: |
           bash -n gba/tools/bootstrap_native.sh gba/tools/bootstrap_ci.sh gba/tools/setup-pacbrew-dependencies.sh gba/tools/build.sh
@@ -74,6 +78,35 @@ jobs:
           echo "$RUNNER_TEMP/ps5gba-tools/bin" >> "$GITHUB_PATH"
           clang-18 --version
           meson --version
+      - name: Prepare pinned original Porpoise fonts, buttons and sounds
+        shell: bash
+        run: |
+          set -euo pipefail
+          rev=2ed1ab5a06995aa198f7bccd4da0f90c3fc29d39
+          root=ps5/porpoise_original/assets
+          mkdir -p "$root/fonts" "$root/brand" "$root/ui" "$root/sounds" ps5/frontend/assets/porpoise ps5/frontend/assets/sounds
+          for spec in \
+            'fonts/Nunito-Regular.ttf 2f4a2f8467657c1f039800f7af0f85d719d92bf6' \
+            'fonts/Nunito-SemiBold.ttf 2588d394a7b5773e8355c1d923877bef338f2adf' \
+            'fonts/Nunito-Bold.ttf c642a28adb3b5b89bc37dca9b76b81fa114c022b' \
+            'fonts/Nunito-ExtraBold.ttf 5dab2fd42d061b7f69ecbee7ac3f73d50053978c' \
+            'fonts/NotoSansJP-Porpoise.ttf e18162d7dd500a08d301b91949c6aa9a0c94907e' \
+            'brand/dolphin-mask.png bd51e74f7e11c79de9d40d626d3685038cf5d792' \
+            'ui/buttons.png 43902f0bccdab08fb74efb0a99ae3f282299543a' \
+            'sounds/game-row.wav d10d7d6ef5f8cb7343539e8aafb57fcb49f90a0f' \
+            'sounds/menu-scroll.wav abab02c03a9a8181f3c81ad6d027de6b9940213a'; do
+            read -r name expected <<< "$spec"
+            curl -fL --retry 5 --retry-all-errors --connect-timeout 20 \
+              "https://raw.githubusercontent.com/elripalda/Porpoise-Dolphin-Emulator-for-PS5/$rev/assets/$name" -o "$root/$name"
+            test "$(git hash-object "$root/$name")" = "$expected"
+          done
+          cp -R "$root/fonts" "$root/ui" ps5/frontend/assets/porpoise/
+          cp "$root/sounds/"*.wav ps5/frontend/assets/sounds/
+          mkdir -p ps5/porpoise_original/src/stb
+          cp ps5/frontend/third_party/stb_image.h ps5/porpoise_original/src/stb/stb_image.h
+          cp ps5/frontend/third_party/stb_truetype.h ps5/porpoise_original/src/stb/stb_truetype.h
+          python3 ps5/porpoise_original/tools/rebuild_shader.py
+          test -s ps5/porpoise_original/src/ui_frag.inc
       - name: Prepare pinned Vulkan, payload SDK, libnfs and PacBrew
         timeout-minutes: 305
         run: bash gba/tools/bootstrap_ci.sh
@@ -85,14 +118,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 gba/tools/verify_package.py
-          cp gba/build-shelf/PS5GBA-v2.1-by-YAHBALLON.zip gba/build-shelf/PPSA99209.zip
+          cp gba/build-shelf/GBAXY-v2.2.0-by-YAHBALLON.zip gba/build-shelf/PPSA99209.zip
           cd gba/build-shelf
           sha256sum PPSA99209.zip > PPSA99209.zip.sha256
           unzip -tq PPSA99209.zip
       - name: Upload actual compiled PS5 package
         uses: actions/upload-artifact@v4
         with:
-          name: PS5GBAX-v2.1.0-PPSA99209
+          name: GBAXY-v2.2.0-PPSA99209
           path: |
             gba/build-shelf/PPSA99209.zip
             gba/build-shelf/PPSA99209.zip.sha256
@@ -107,7 +140,7 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             tag="${GITHUB_REF#refs/tags/}"
           else
-            tag="v2.1.0"
+            tag="v2.2.0"
           fi
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "::error::Release $tag exists; refusing to silently overwrite it."
@@ -116,6 +149,6 @@ jobs:
           gh release create "$tag" \
             gba/build-shelf/PPSA99209.zip \
             gba/build-shelf/PPSA99209.zip.sha256 \
-            --title "PS5GBA $tag by YAHBALLON" \
+            --title "GBAXY $tag by YAHBALLON" \
             --notes-file RELEASE_NOTES.md \
             --target "$GITHUB_SHA"
