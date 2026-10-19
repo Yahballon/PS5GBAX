@@ -111,6 +111,17 @@ jobs:
       - name: Prepare pinned Vulkan, payload SDK, libnfs and PacBrew
         timeout-minutes: 305
         run: bash gba/tools/bootstrap_ci.sh
+      - name: Restore verified previously released GBA Lapy helper
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release download v2.1.0 --repo Yahballon/PS5GBAX \
+            --pattern 'PPSA99209.zip' --dir "$RUNNER_TEMP"
+          echo '411aca3b150e9ede683ba4b6ad6be4e2344da688dfa45664d43d24fdd51f491d  '"$RUNNER_TEMP/PPSA99209.zip" | sha256sum -c -
+          unzip -tq "$RUNNER_TEMP/PPSA99209.zip"
+          printf 'PS5GBA_LAPY_BASELINE=%s\n' "$RUNNER_TEMP/PPSA99209.zip" >> "$GITHUB_ENV"
       - name: Native signed PS5 compile and package
         timeout-minutes: 35
         run: bash gba/tools/build.sh

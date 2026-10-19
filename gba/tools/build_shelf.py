@@ -102,8 +102,30 @@ subprocess.run([str(tool),'self','--sign','--in',str(out/'eboot.elf'),'--out',st
 subprocess.run([str(tool),'self','--inspect','--file',str(app/'eboot.bin')],check=True)
 shutil.copytree(nes/'sce_sys',app/'sce_sys',dirs_exist_ok=True)
 shutil.copy2(deps/'PS5_Vulkan/runtime/libc.prx',app/'sce_module/libc.prx')
-subprocess.run(['python3',str(nes/'tools/build-lapy-helper.py'),'PPSA99209',str(out/'filesystem-helper')],check=True)
-for name in ['lapy.elf','lapy-manifest.json']:shutil.copy2(out/'filesystem-helper'/name,app/name)
+# Upstream's historical Lapy commit is no longer fetchable. Reuse only the
+# exact-title helper already included in our previous independently verified
+# release, after checking the entire archive's pinned SHA-256 in CI.
+baseline=os.environ.get('PS5GBA_LAPY_BASELINE')
+if not baseline:
+    raise RuntimeError('PS5GBA_LAPY_BASELINE is required: pinned prior PPSA99209 release ZIP')
+baseline=Path(baseline)
+with zipfile.ZipFile(baseline) as archive:
+    names=set(archive.namelist())
+    for name in ['lapy.elf','lapy-manifest.json']:
+        item='PPSA99209/'+name
+        if item not in names:raise RuntimeError('Missing verified Lapy helper: '+item)
+        (app/name).write_bytes(archive.read(item))
+    license_name='PPSA99209/licenses/Lapy-MIT.txt'
+    if license_name not in names:raise RuntimeError('Lapy MIT license missing in pinned release')
+    (out/'filesystem-helper').mkdir(exist_ok=True)
+    (out/'filesystem-helper/Lapy-MIT.txt').write_bytes(archive.read(license_name))
+lapy=json.loads((app/'lapy-manifest.json').read_text())
+if lapy.get('target_title')!='PPSA99209' or lapy.get('mode')!='elf-helper':
+    raise RuntimeError('Pinned Lapy helper has invalid target-title or mode')
+if lapy.get('elf_sha256')!=hashlib.sha256((app/'lapy.elf').read_bytes()).hexdigest():
+    raise RuntimeError('Pinned Lapy helper ELF does not match its manifest')
+if (app/'lapy.elf').read_bytes()[:6]!=b'\x7fELF\x02\x01':
+    raise RuntimeError('Pinned Lapy helper is not an ELF64 executable')
 licenses=app/'licenses';licenses.mkdir(exist_ok=True)
 for path,name in [(core/'LICENSE','mGBA-MPL-2.0.txt'),(project/'COPYING.GPLv3','GPLv3.txt'),
                   (out/'filesystem-helper/Lapy-MIT.txt','Lapy-MIT.txt'),(deps/'libnfs/COPYING','libnfs.txt')]:
