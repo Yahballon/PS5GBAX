@@ -1,0 +1,16 @@
+{
+  "name": "GBAXY",
+  "version": "2.2.0",
+  "releaseTag": "v2.2.0",
+  "titleId": "PPSA99209",
+  "core": "mGBA 0.10.5",
+  "frontend": "Native adaptive Porpoise CoverFlow with five GBA themes",
+  "dataPath": "/data/PS5GBA/",
+  "themes": [
+    "Advance Wave",
+    "Pixel Mint",
+    "Lava Pulse",
+    "Silver Core",
+    "Cosmic Violet"
+  ]
+}

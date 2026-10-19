@@ -10,7 +10,7 @@
   "conceptId": "99209",
   "contentBadgeType": 1,
   "contentId": "UP9000-PPSA99209_00-PS5GBA0000000001",
-  "contentVersion": "01.000.003",
+  "contentVersion": "02.002.000",
   "downloadDataSize": 256,
   "gameIntent": {
     "permittedIntents": [
@@ -22,7 +22,7 @@
   "localizedParameters": {
     "defaultLanguage": "en-US",
     "en-US": {
-      "titleName": "PS5GBA"
+      "titleName": "GBAXY"
     }
   },
   "masterVersion": "01.00",
