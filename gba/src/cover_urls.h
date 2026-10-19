@@ -5981,16 +5981,63 @@ inline constexpr CoverEntry cover_names[]={
 {"xxx","xXx (France).png"},
 {"xxx","xXx (USA, Europe).png"},
 };
-inline std::vector<std::string> CoverUrls(const fe::GameInfo& game){
- const std::string base="https://thumbnails.libretro.com/Nintendo%20-%20Game%20Boy%20Advance/Named_Boxarts/";
- std::vector<std::string> result;auto add=[&](const std::string& name){auto url=base+CoverEncode(name);if(std::find(result.begin(),result.end(),url)==result.end())result.push_back(url);};
- std::string stem=game.stem.empty()?game.title:game.stem;if(stem.ends_with(".gba")||stem.ends_with(".zip"))stem.resize(stem.size()-4);
- auto key=CoverKey(stem);std::string region=game.region;for(auto name:{"Germany","France","Spain","Italy","Europe","USA","Japan"})if(stem.find(name)!=stem.npos){region=name;break;}
- const char* best=nullptr;int score=-100000;
- for(const auto& entry:cover_names){auto name=entry.filename;if(key.empty()||key!=entry.key){if(stem+".png"==name){add(name);return result;}continue;}std::string title=name;title.resize(title.size()-4);if(title==stem){add(name);return result;}
- int rank=0;if(!region.empty()&&title.find(region)!=title.npos)rank+=100;
- if(title.find("USA")!=title.npos)rank+=20;else if(title.find("Europe")!=title.npos)rank+=15;
- if(title.find("(Rev")!=title.npos)rank-=2;if(rank>score){score=rank;best=name;}}
- if(best)add(best);else add(stem+".png");return result;
+// Try the user's direct Libretro thumbnail index first, then the upstream
+// GitHub mirror. Match No-Intro (USA/Europe/Japan/etc.) names and fall back
+// to the ROM filename when the database does not contain an exact name.
+inline std::vector<std::string> CoverUrls(const fe::GameInfo& game) {
+    constexpr const char* hosts[]={
+        "https://thumbnails.libretro.com/Nintendo%20-%20Game%20Boy%20Advance/Named_Boxarts/",
+        "https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Game_Boy_Advance/master/Named_Boxarts/"
+    };
+    std::vector<std::string> urls;
+    auto add=[&](const std::string& filename){
+        for(const char* host:hosts) {
+            const std::string url=std::string(host)+CoverEncode(filename);
+            if(std::find(urls.begin(),urls.end(),url)==urls.end())urls.push_back(url);
+        }
+    };
+    std::string stem=game.stem.empty()?game.title:game.stem;
+    for(const auto* ext:{".gba",".zip",".GBA",".ZIP"}) {
+        if(stem.size()>=4&&stem.ends_with(ext)){stem.resize(stem.size()-4);break;}
+    }
+    const std::string key=CoverKey(stem);
+    std::string region=game.region;
+    for(const auto* name:{"Germany","France","Spain","Italy","Europe","USA","Japan"})
+        if(stem.find(name)!=std::string::npos){region=name;break;}
+
+    // Prefer filename-identical cover; otherwise rank regional variants,
+    // keeping only a handful to avoid many serial downloads on a 404.
+    std::vector<std::pair<int,std::string>> matches;
+    for(const auto& entry:cover_names) {
+        const std::string filename=entry.filename;
+        if(stem+".png"==filename) {
+            matches.emplace_back(1000,filename);
+        } else if(!key.empty()&&key==entry.key) {
+            int score=0;
+            if(!region.empty()&&filename.find(region)!=std::string::npos)score+=100;
+            if(filename.find("(USA")!=std::string::npos)score+=30;
+            else if(filename.find("(Europe")!=std::string::npos)score+=20;
+            else if(filename.find("(Japan")!=std::string::npos)score+=10;
+            if(filename.find("(Rev")!=std::string::npos)score-=3;
+            if(filename.find("(Proto")!=std::string::npos)score-=20;
+            matches.emplace_back(score,filename);
+        }
+    }
+    std::stable_sort(matches.begin(),matches.end(),[](const auto& a,const auto& b){
+        return a.first>b.first;
+    });
+    size_t tried=0;
+    for(const auto& match:matches) {
+        if(tried>=3)break;
+        // Each candidate goes to both servers before moving to the next
+        // regional box-art filename.
+        const size_t before=urls.size();
+        add(match.second);
+        if(urls.size()!=before)++tried;
+    }
+    // Direct URL fallback handles homebrew, hacks, renamed or unindexed titles.
+    if(tried<3) add(stem+".png");
+    if(urls.empty()) add(game.title+".png");
+    return urls;
 }
 }

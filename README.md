@@ -12,6 +12,9 @@ PS5GBA is a native PS5 homebrew Game Boy Advance emulator using **mGBA 0.10.5**.
 
 ## GBAXY v2.2.0 — What's new
 
+**GBA cover download:** Local artwork and the existing cache take priority. Online lookup now tries the [Libretro GBA Named Boxarts index](https://thumbnails.libretro.com/Nintendo%20-%20Game%20Boy%20Advance/Named_Boxarts/) and the upstream Libretro GitHub mirror, with up to three No-Intro region/name variations per game. Missing thumbnails are fetched on demand and cached locally.
+
+
 - **GBAXY identity** in the PS5 home screen, CoverFlow and animated startup screen.
 - **Adaptive 3D game cases**: genuine GBA portrait box art stays portrait; square, custom and landscape covers retain their real proportions, with uncropped artwork and reflections.
 - **Five exclusive themes**, all configurable under Settings → Appearance → Theme: Advance Wave (electric blue/teal), Pixel Mint (lime/green), Lava Pulse (orange/red), Silver Core (silver/white) and Cosmic Violet (purple/magenta).

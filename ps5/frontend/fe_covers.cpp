@@ -444,7 +444,7 @@ void CoverService::PaintSpine(const Fonts& fonts, const GameInfo& g, CoverImage&
 	std::vector<uint8_t> a;
 	int tw, th, base;
 	// "PlayStation 2" at the top, the title, and the serial at the foot, all reading downwards.
-	fonts.Raster("Nintendo SNES", 25.0f, a, tw, th, base);
+	fonts.Raster("Game Boy Advance", 25.0f, a, tw, th, base);
 	DrawAlpha(out, a, tw, th, (W - th) / 2, 40, 0xe8e8e8, true);
 	const int title_top = 60 + tw + 70, title_bottom = H - 190;
 	float px = 44.0f;
@@ -493,7 +493,7 @@ void CoverService::PaintPlaceholder(const Fonts& fonts, const GameInfo& g, Cover
 	}
 	std::vector<uint8_t> a;
 	int tw, th, base;
-	fonts.Raster("Nintendo SNES", 19.0f, a, tw, th, base);
+	fonts.Raster("Game Boy Advance", 19.0f, a, tw, th, base);
 	DrawAlpha(out, a, tw, th, 12, 18 - base + 6, 0xffffff, false);
 	const std::vector<std::string> lines = Wrap(fonts, g.title, 38.0f, W - 44.0f, 5);
 	const float line_h = 46.0f;
@@ -658,7 +658,7 @@ static int FetchCover(const GameInfo& game,const CoverConfig& cfg,const Download
  auto urls=cfg.resolve_urls?cfg.resolve_urls(game):std::vector<std::string>{cfg.url_template};
  int status=404,other_error=0;
  for(auto url:urls){if(stop&&*stop)break;auto at=url.find("${serial}");if(at!=url.npos)url.replace(at,9,game.serial);
-  at=url.find("${title}");if(at!=url.npos)url.replace(at,8,snes::CoverEncode(game.stem));
+  at=url.find("${title}");if(at!=url.npos)url.replace(at,8,gba::CoverEncode(game.stem));
   used=url;bytes.clear();status=download(url,bytes);
   if(status<0&&!(stop&&*stop)){bytes.clear();status=download(url,bytes);}
   if(status==200&&CoverService::Decode(bytes,1024,image)){std::printf("[covers] matched %s -> %s\n",game.file.c_str(),url.c_str());return 200;}

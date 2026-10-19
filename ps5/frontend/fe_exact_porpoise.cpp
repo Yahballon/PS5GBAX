@@ -222,10 +222,10 @@ void ExactPorpoiseShelf::Prepare(unsigned slot, float w, float h)
 
     // GBAXY branding with the build number visible immediately below it.
     // No Library / Save States / Settings tabs or L1/R1 glyphs.
-    const auto themeAccent=m_theme=="sunset-arcade"?rgba(0xFFB86A):
-       m_theme=="emerald-circuit"?rgba(0x63FFC1):
-       m_theme=="glacier-glass"?rgba(0xB2E9FF):
-       m_theme=="midnight-gold"?rgba(0xF8D58A):rgba(0xC7B8FF);
+    const auto themeAccent=m_theme=="lava-pulse"?rgba(0xFF7656):
+       m_theme=="pixel-mint"?rgba(0xA2FF63):
+       m_theme=="silver-core"?rgba(0xE7F1FF):
+       m_theme=="cosmic-violet"?rgba(0xB984FF):rgba(0x53D5FF);
     if (g.brand_mask()) g.image(g.brand_mask(), 48, kBarCy-32, 64, 64, themeAccent);
     g.text_mid(Font::SemiBold, 30, 132, kBarCy-13, themeAccent, Align::Left,
                "GBAXY", 7.0f);
