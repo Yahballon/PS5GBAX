@@ -942,7 +942,10 @@ void App::UpdateSheet(double dt, const Input& in)
 	else
 		m_sheet_held_v = 0;
 
-	const OptionsSheet::Row& row = rows[static_cast<size_t>(m_sheet_row)];
+	// (AI-assisted) Step/Reset/Activate may call Save()->Reload()->BuildRows().
+	// Keep a *value copy*: referencing m_sheet.rows() after that would be a
+	// use-after-free on the very first save for a newly added game.
+	const OptionsSheet::Row row = rows[static_cast<size_t>(m_sheet_row)];
 	auto after = [&](bool changed) {
 		const std::string& st = m_sheet.status();
 		if (!st.empty())
