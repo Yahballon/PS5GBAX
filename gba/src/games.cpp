@@ -1,6 +1,7 @@
 // (AI-assisted) Local/USB/NFS ROM loading, including bounded ZIP decoding in memory.
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "games.h"
+#include "sevenzip.h"
 #include "scan_progress.h"
 #include "fe_nfs.h"
 #include <libretro.h>
@@ -30,7 +31,8 @@ static bool RomName(const std::string& name) {
     auto ext=Lower(name.substr(p));return ext==".gba";
 }
 static bool GameName(const std::string& name) {
-    return RomName(name)||(name.size()>4 && Lower(name.substr(name.size()-4))==".zip");
+    return RomName(name)||(name.size()>4 && Lower(name.substr(name.size()-4))==".zip") ||
+        (name.size()>3 && Lower(name.substr(name.size()-3))==".7z");
 }
 static void Add(std::vector<Game>& games,const std::string& path,const std::string& name,uint64_t bytes=0) {
     auto dot=name.rfind('.');games.push_back({path,name.substr(0,dot),bytes});
@@ -156,6 +158,8 @@ bool ReadRom(const std::string& path,std::vector<uint8_t>& rom,std::string& erro
     }
     if(path.size()>4&&Lower(path.substr(path.size()-4))==".zip") {
         if(!Unzip(bytes,rom,error)){rom.clear();return false;}
+    } else if(path.size()>3 && Lower(path.substr(path.size()-3))==".7z") {
+        if(!Unsevenzip(bytes,rom,error)){rom.clear();return false;}
     } else rom=std::move(bytes);
     if(rom.size()<192||rom.size()>(32u<<20)||rom[3]!=0xEA||rom[0xB2]!=0x96){error="Invalid GBA cartridge header";rom.clear();return false;}
     error.clear();return true;
