@@ -602,6 +602,8 @@ std::string OptionsSheet::Help(const Row& r) const
 bool OptionsSheet::Save(const std::vector<Change>& changes, const std::string& note)
 {
 	std::string what, error;
+    std::printf("[options] save begin: %s (%zu change(s))\n", m_file_label.c_str(), changes.size());
+    std::fflush(stdout);
     const bool theme_only=changes.size()==1&&changes.front().key=="GBAXY/Theme";
     const std::string& destination=theme_only?m_paths.gs_ini:m_path;
 	if (!EditSettingsFile(destination, theme_only ? "# GBAXY theme" : (m_global ? m_header : m_header + ": written from GBAXY"), changes, what, error))
