@@ -25,9 +25,9 @@ print(f'GBA core: {len(objects)} PS5 objects (AI-assisted)',flush=True)
 cpp=[*base,'-std=c++20','-fno-exceptions','-fno-rtti','-pthread','-DORBIS_NFS=1','-I'+str(nfs/'include'),
      '-I'+str(z/'include'),'-DORBIS_VULKAN=1','-DORBIS_NES=1','-DORBIS_CURL=1','-DCURL_STATICLIB',
      '-I'+str(project/'3rdparty/vulkan/include'),'-I'+str(project/'3rdparty/include'),
-     '-DFE_FONT_DIR="'+str(project/'bin/resources/fonts')+'"','-DFE_ASSET_DIR="'+str(project/'ps5/frontend/assets')+'"','-I'+str(nes/'src'),'-I'+str(project/'ps5/frontend'),
+     '-DFE_FONT_DIR="'+str(project/'bin/resources/fonts')+'"','-DFE_ASSET_DIR="'+str(project/'ps5/frontend/assets')+'"','-I'+str(nes/'src'),'-I'+str(core/'src'),'-I'+str(project/'ps5/frontend'),
      '-I'+str(project/'ps5/coreorbis/orbis-shims/filesystem-elevation'),*incs]
-cpp_sources=[nes/'src'/n for n in ['core_session.cpp','games.cpp','shelf_games.cpp','shelf_runtime.cpp','main_shelf.cpp','loading.cpp','library_cache.cpp','controller_bindings.cpp']]
+cpp_sources=[nes/'src'/n for n in ['core_session.cpp','games.cpp','sevenzip.cpp','shelf_games.cpp','shelf_runtime.cpp','main_shelf.cpp','loading.cpp','library_cache.cpp','controller_bindings.cpp']]
 cpp_sources += [project/'ps5/frontend'/f'{name}.cpp' for name in ['fe_app','fe_covers','fe_renderer','fe_sound','fe_text','fe_vk','fe_ps5','fe_web','fe_i18n','fe_settings','fe_options','fe_exact_porpoise']]
 cpp_sources += [project/'ps5/frontend/fe_nfs.cpp',project/'ps5/coreorbis/orbis-shims/filesystem-elevation/src/elevation.cpp']
 cpp_sources += [project/'ps5/porpoise_original/src/ui_gfx.cpp']
@@ -39,6 +39,17 @@ for src in cpp_sources:
 qrcode=out/'obj/qrcodegen.o'
 subprocess.run(['clang-18',*cflags,'-I'+str(project/'ps5/frontend/third_party/qrcodegen'),'-c',str(project/'ps5/frontend/third_party/qrcodegen/qrcodegen.c'),'-o',str(qrcode)],check=True)
 objects.append(qrcode)
+# (AI-assisted) 7z decoding uses the already-vendored mGBA 7-Zip SDK.
+# Compile it for the PS5 target even though the mGBA core's own LZMA VFS is disabled.
+lzma_root=core/'src/third-party/lzma'
+lzma_units=['7zAlloc','7zArcIn','7zBuf','7zBuf2','7zCrc','7zCrcOpt','7zDec',
+            'CpuArch','Delta','LzmaDec','Lzma2Dec','Bra','Bra86','BraIA64',
+            'Bcj2','Ppmd7','Ppmd7Dec','7zStream']
+for unit in lzma_units:
+    src=lzma_root/(unit+'.c')
+    obj=out/'obj'/('sevenzip_'+unit+'.o')
+    subprocess.run(['clang-18',*cflags,'-D_7ZIP_PPMD_SUPPPORT','-c',str(src),'-o',str(obj)],check=True)
+    objects.append(obj)
 vulkan=deps/'PS5_Vulkan'
 mesa=Path(os.environ.get('PS5GBA_MESA_UTIL_DIR',str(out/'mesa-util')))
 if not all((mesa/name).exists() for name in ['u_thread.o','anon_file.o','os_file.o']):
