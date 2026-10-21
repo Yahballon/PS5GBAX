@@ -191,3 +191,5 @@ bool Unsevenzip(const std::vector<uint8_t>& archive, std::vector<uint8_t>& rom, 
     error.clear();
     return true;
 }
+
+} // namespace gba
