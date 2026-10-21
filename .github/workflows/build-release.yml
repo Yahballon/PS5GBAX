@@ -3,7 +3,7 @@ name: GBAXY Native Build & Release
 
 on:
   push:
-    branches: [main, feature/gbaxy-v2.2.0]
+    branches: [main, feature/gbaxy-v2.2.0, feature/issue-2-7z]
     tags: ['v*']
   pull_request:
     branches: [main]
