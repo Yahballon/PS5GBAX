@@ -52,13 +52,28 @@ bool ShelfRuntime::Start(const std::string& path,fe::Renderer& renderer) {
     return true;
 }
 void ShelfRuntime::Stop(fe::Renderer& renderer) {
+    if(!active)return;
+    std::printf("[gba] stop: game to shelf, saving SRAM\n");std::fflush(stdout);
     if(!core.Unload())error=core.error;
-    audio.reset();renderer.SetAtlas(menu_atlas);
-    for(unsigned i=0;i<3;++i){if(game_sets[i])renderer.FreeTextureSet(game_sets[i]);if(game_textures[i])renderer.DestroyTexture(game_textures[i]);game_sets[i]=VK_NULL_HANDLE;game_textures[i]=nullptr;}active=false;
+    std::printf("[gba] stop: closing game audio\n");std::fflush(stdout);
+    audio.reset();
+    // (AI-assisted) A game frame may still be sampled by GPU work in flight.
+    // Synchronize once at the menu transition, never in gameplay.
+    // This also guards the first switch from a freshly loaded game.
+    std::printf("[gba] stop: waiting for last GPU frame\n");std::fflush(stdout);
+    renderer.WaitIdle();
+    renderer.SetAtlas(menu_atlas);
+    for(unsigned i=0;i<3;++i){
+        if(game_sets[i])renderer.FreeTextureSet(game_sets[i]);
+        if(game_textures[i])renderer.DestroyTexture(game_textures[i]);
+        game_sets[i]=VK_NULL_HANDLE;game_textures[i]=nullptr;
+    }
+    active=false;
+    std::printf("[gba] stop: shelf resources restored\n");std::fflush(stdout);
 }
 bool ShelfRuntime::Build(fe::Renderer& renderer,fe::FrameDesc& frame,uint32_t raw,double now) {
     const auto input=bindings.Update(raw,now);
-    if(input.menu){Stop(renderer);return false;}
+    if(input.menu){std::printf("[gba] menu input: returning to shelf\n");std::fflush(stdout);Stop(renderer);return false;}
     if(input.save||input.load) {
         const bool okay=input.save?core.SaveState():core.LoadState();
         if(!okay)error=core.error;
