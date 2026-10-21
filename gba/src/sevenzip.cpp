@@ -104,10 +104,7 @@ bool IsGbaFilename(const CSzArEx& archive, UInt32 index) {
     const size_t size = SzArEx_GetFileNameUtf16(&archive, index, nullptr);
     if (size < 5 || size > 4096) return false; // includes terminating 0
     // Check suffix directly in UTF-16: no allocation or path extraction needed.
-    const size_t at = archive.FileNameOffsets[index + 1] - 5;
-    // Do not use a cached offset here: the SDK's offset index can contain
-    // name-table padding, so ask the SDK for the actual UTF-16 text instead.
-    (void)at;
+    // Read the actual UTF-16 text; no paths are written to disk.
     std::vector<UInt16> name(size);
     SzArEx_GetFileNameUtf16(&archive, index, name.data());
     if (name[size - 1] != 0) return false;
