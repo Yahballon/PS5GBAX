@@ -68,7 +68,7 @@ The filesystem helper is restricted to this app's title ID. If filesystem access
 
 ## Add games
 
-**Supported ROM formats:** `.gba` (case-insensitive) and single-GBA-ROM `.zip` archives. SNES extensions such as `.sfc` and `.smc` are not GBA ROMs. A source-code ZIP downloaded from GitHub is not an installable PS5 build.
+**Supported ROM formats:** `.gba` (case-insensitive), single-GBA-ROM `.zip`, and (experimental on the 7z feature branch) single-GBA-ROM `.7z` archives. SNES extensions such as `.sfc` and `.smc` are not GBA ROMs. A source-code ZIP downloaded from GitHub is not an installable PS5 build.
 
 If games are not listed, check `/data/PS5GBA/logs/boot.log` for `[library]` scan errors. Restart after adding ROMs or request **Rescan library** in All games settings and restart.
 
@@ -123,13 +123,14 @@ Save the URL and restart PS5GBA. URLs can also be entered in `/data/PS5GBA/nfs.t
 
 The app connects directly to the server. ROMs are read into RAM when launched; no PS5 kernel mount is required. Clear saved URLs in All games settings when a share is no longer needed.
 
-### ZIP support
+### ZIP and 7z support
 
 Use **one `.gba` image per ZIP**. Stored and Deflate compression are supported.
 
 - Maximum ROM size: **32 MiB**.
 - Maximum ZIP/file size: **64 MiB**.
-- Encrypted, multi-ROM and ZIP64 archives are not supported.
+- Encrypted, multi-ROM and ZIP64 ZIP archives are not supported.
+- **7z (experimental, Issue #2):** LZMA/LZMA2 archives with exactly one `.gba` game can be read directly from internal storage, USB or NFS without writing an extracted ROM to disk. 7z archives must be at most 64 MiB and their decoded ROM at most 32 MiB. Solid folders that expand beyond 64 MiB, password-protected archives and multi-ROM archives are rejected. 7z requires PS5 hardware testing before inclusion in a stable release.
 - A ZIP containing an entire ROM collection must be unpacked into individual ROMs or individual game ZIPs on your server.
 
 ## Graphics settings
