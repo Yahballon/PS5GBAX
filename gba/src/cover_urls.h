@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <cstdlib>
 namespace gba {
 inline std::string CoverKey(std::string s){
  // (AI-assisted) Common ROM title accents differ from the repository's ASCII names.
@@ -5981,6 +5982,39 @@ inline constexpr CoverEntry cover_names[]={
 {"xxx","xXx (France).png"},
 {"xxx","xXx (USA, Europe).png"},
 };
+// (AI-assisted) No-Intro and GoodTools scene dumps often carry a numeric
+// catalog prefix ("1636 - ..."). Strip it only for a plausible numbered ROM,
+// preserving real numbered titles such as "007 - NightFire".
+inline std::string CoverCleanDumpPrefix(std::string s) {
+    size_t i=0;
+    while(i<s.size() && s[i]>='0' && s[i]<='9' && i<6) ++i;
+    if(i<3 || i>5) return s;
+    const unsigned number=static_cast<unsigned>(std::strtoul(s.substr(0,i).c_str(),nullptr,10));
+    if(number<100) return s;
+    size_t j=i;
+    while(j<s.size() && s[j]==' ') ++j;
+    if(j==s.size() || (s[j]!='-' && s[j]!='_' && s[j]!='.')) return s;
+    ++j;
+    while(j<s.size() && s[j]==' ') ++j;
+    return j<s.size()?s.substr(j):s;
+}
+// Normalize the common Pokemon title spellings seen in scene ROM dumps:
+// "Pokemon Fire Red"/"Pokemon FireRed" -> "Pokemon - FireRed Version".
+inline std::string CoverAliasKey(const std::string& key) {
+    for(const char* name:{"firered","leafgreen","ruby","sapphire","emerald"}) {
+        const std::string base=std::string("pokemon")+name;
+        if(key==base) return base+"version";
+    }
+    return key;
+}
+// Regions in No-Intro and older GoodTools dumps may use short tags (U/E/J).
+inline std::string CoverDumpRegion(const std::string& raw, std::string region) {
+    if(raw.find("(U)")!=raw.npos || raw.find("[U]")!=raw.npos) return "USA";
+    if(raw.find("(E)")!=raw.npos || raw.find("[E]")!=raw.npos) return "Europe";
+    if(raw.find("(J)")!=raw.npos || raw.find("[J]")!=raw.npos) return "Japan";
+    return region;
+}
+
 // Try the user's direct Libretro thumbnail index first, then the upstream
 // GitHub mirror. Match No-Intro (USA/Europe/Japan/etc.) names and fall back
 // to the ROM filename when the database does not contain an exact name.
@@ -6000,8 +6034,11 @@ inline std::vector<std::string> CoverUrls(const fe::GameInfo& game) {
     for(const auto* ext:{".gba",".zip",".GBA",".ZIP"}) {
         if(stem.size()>=4&&stem.ends_with(ext)){stem.resize(stem.size()-4);break;}
     }
-    const std::string key=CoverKey(stem);
-    std::string region=game.region;
+    // Check the canonical title, not dump numbers or release-group tags.
+    // CoverKey already discards (U), (Squirrels), [!] and language tags.
+    const std::string cleaned=CoverCleanDumpPrefix(stem);
+    const std::string key=CoverAliasKey(CoverKey(cleaned));
+    std::string region=CoverDumpRegion(stem,game.region);
     for(const auto* name:{"Germany","France","Spain","Italy","Europe","USA","Japan"})
         if(stem.find(name)!=std::string::npos){region=name;break;}
 
@@ -6036,7 +6073,8 @@ inline std::vector<std::string> CoverUrls(const fe::GameInfo& game) {
         if(urls.size()!=before)++tried;
     }
     // Direct URL fallback handles homebrew, hacks, renamed or unindexed titles.
-    if(tried<3) add(stem+".png");
+    if(tried<3) add(cleaned+".png");
+    if(tried<3 && cleaned!=stem) add(stem+".png");
     if(urls.empty()) add(game.title+".png");
     return urls;
 }
