@@ -240,7 +240,7 @@ void ExactPorpoiseShelf::Prepare(unsigned slot, float w, float h)
     const CoverProgress& progress = m_cover_progress;
     // The status box is transient: it disappears automatically when the
     // final missing ROM has been checked (or when the worker stops because
-    // the network is unavailable). A manual R2 refresh starts a new cycle.
+    // the network is unavailable). A manual Triangle refresh starts a new cycle.
     if(progress.games > 0 && progress.planned > 0 &&
        !progress.done && !progress.offline)
     {
@@ -338,7 +338,7 @@ void ExactPorpoiseShelf::Prepare(unsigned slot, float w, float h)
     constexpr float hintY=1010;
     struct Prompt {Glyph glyph; const char* text;};
     const Prompt left[]={{Glyph::DPad,"Browse"},{Glyph::Cross,"Play"}};
-    const Prompt right[]={{Glyph::Square,"Settings"}};
+    const Prompt right[]={{Glyph::Square,"Settings"},{Glyph::Triangle,"Retry cover"}};
     float lx=58;
     for(const auto& p:left)
     {
@@ -346,7 +346,7 @@ void ExactPorpoiseShelf::Prepare(unsigned slot, float w, float h)
         lx+=52+g.text_mid(Font::SemiBold,24,lx+52,hintY,kWhite,Align::Left,p.text)+40;
     }
     float rx=1862;
-    for(int i=0;i>=0;--i)
+    for(int i=1;i>=0;--i)
     {
         const float tw=g.measure(Font::SemiBold,24,right[i].text);
         g.text_mid(Font::SemiBold,24,rx,hintY,kWhite,Align::Right,right[i].text);
