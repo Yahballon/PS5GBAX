@@ -8,7 +8,8 @@ assert 'https://thumbnails.libretro.com/Nintendo%20-%20Game%20Boy%20Advance/Name
 assert 'https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Game_Boy_Advance/master/Named_Boxarts/' in h
 assert 'const std::string url=std::string(host)+CoverEncode(filename)' in h
 assert 'if(tried>=3)break' in h
-assert 'if(tried<3) add(stem+".png")' in h
+assert 'if(tried<3) add(cleaned+".png")' in h
+assert 'CoverCleanDumpPrefix' in h and 'CoverAliasKey' in h and 'CoverDumpRegion' in h
 assert 'game.region' in h and 'matches.emplace_back' in h
 assert 'gba::CoverEncode' in worker and 'snes::CoverEncode' not in worker
 assert '"Game Boy Advance"' in worker and '"Nintendo SNES"' not in worker
