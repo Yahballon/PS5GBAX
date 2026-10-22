@@ -89,7 +89,7 @@ void MakeDirs(const std::string& path)
 }
 
 // vk-285-110: for CoverFinder.
-constexpr const char* kImageExts[] = {".jpg", ".png", ".jpeg"};
+constexpr const char* kImageExts[] = {".png", ".jpg", ".jpeg"};
 
 std::string LowerAscii(std::string s)
 {
@@ -323,7 +323,30 @@ std::string CoverFinder::Subdir(const std::string& dir, const char* lower_name)
 	return it == names.end() ? std::string() : dir + "/" + it->second;
 }
 
-// Adds `dir`/<base>.jpg/.png/.jpeg, in any letter case, when it's there.
+// (AI-assisted) Extract the actual ROM basename, not the UI title or
+// a cleaned fuzzy-match name. The last extension may be .gba, .zip or .7z;
+// inner dots in a filename must be preserved.
+static std::string RomCoverStem(const GameInfo& g)
+{
+	std::string file = g.file;
+	if (file.empty() && !g.path.empty())
+	{
+		const size_t slash = g.path.find_last_of('/');
+		file = g.path.substr(slash == std::string::npos ? 0 : slash + 1);
+	}
+	const size_t dot = file.find_last_of('.');
+	if (dot != std::string::npos)
+	{
+		const std::string ext = LowerAscii(file.substr(dot));
+		if (ext == ".gba" || ext == ".zip" || ext == ".7z")
+			return file.substr(0, dot);
+	}
+	return g.stem.empty() ? file : g.stem;
+}
+
+// Match the complete ROM stem case-insensitively, preferring PNG over JPEG.
+// List every usable format so a corrupted PNG doesn't hide a valid JPG.
+// CoverService::FindLocalCover will try decoding each image in this order.
 bool CoverFinder::Lookup(const std::string& dir, const std::string& base, const char* source, std::vector<CoverFile>& out)
 {
 	if (dir.empty() || base.empty())
@@ -332,16 +355,17 @@ bool CoverFinder::Lookup(const std::string& dir, const std::string& base, const 
 	if (names.empty())
 		return false;
 	const std::string lower = LowerAscii(base);
+	bool found = false;
 	for (const char* ext : kImageExts)
 	{
 		const auto it = names.find(lower + ext);
 		if (it != names.end() && IsCoverFile(dir + "/" + it->second))
 		{
 			out.push_back({dir + "/" + it->second, source});
-			return true;
+			found = true;
 		}
 	}
-	return false;
+	return found;
 }
 
 std::vector<CoverFile> CoverFinder::Find(const GameInfo& g)
@@ -364,17 +388,21 @@ std::vector<CoverFile> CoverFinder::Search(const GameInfo& g, bool first_only)
 	for (const std::string& n : {g.serial, g.stem, g.title})
 		if (!n.empty() && std::find(names.begin(), names.end(), n) == names.end())
 			names.push_back(n);
-	// 1. The covers folder, exact names (as before vk-285-110).
-	if (!m_manual_dir.empty())
-		for (const std::string& n : names)
-			for (const char* ext : kImageExts)
-				if (!done() && IsCoverFile(m_manual_dir + "/" + n + ext))
-					out.push_back({m_manual_dir + "/" + n + ext, "manual"});
+	// (AI-assisted) 1. User-supplied image next to the ROM ALWAYS wins.
+	// marioland2.GBA, marioland2.zip and marioland2.7z all match
+	// marioland2.PNG/JPG/JPEG in the very same directory.
+	// This is an explicit filename match, not a Libretro or fuzzy match.
+	const size_t slash = g.path.rfind('/');
+	if (slash != std::string::npos && slash > 0)
+		Lookup(g.path.substr(0, slash), RomCoverStem(g), "beside", out);
 	if (done())
 		return out;
-	// 2. Beside the disc image, under its name. (A game from cache/usb-games.txt has no path.)
-	const size_t slash = g.path.rfind('/');
-	if (slash != std::string::npos && slash > 0 && Lookup(g.path.substr(0, slash), g.stem, "beside", out) && first_only)
+	// 2. The manual covers folder, matched case-insensitively too.
+	if (!m_manual_dir.empty())
+		for (const std::string& n : names)
+			if (!done())
+				Lookup(m_manual_dir, n, "manual", out);
+	if (done())
 		return out;
 	// 3. A covers folder at the root of the game's USB drive.
 	const std::string drive = UsbDriveRoot(g.path);
@@ -637,6 +665,8 @@ bool CoverService::FindLocalCover(CoverFinder& finder, int index, CoverImage& ou
 		if (ReadFile(f.path, bytes) && Decode(bytes, 1024, out))
 		{
 			out.source = f.source;
+			if (std::strcmp(f.source, "beside") == 0)
+				std::printf("[covers] local ROM cover: %s -> %s\n", g.file.c_str(), f.path.c_str());
 			upgrade = std::strcmp(f.source, "art") == 0;
 			return true;
 		}
