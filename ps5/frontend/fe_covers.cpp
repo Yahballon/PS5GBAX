@@ -107,6 +107,69 @@ bool IsCoverFile(const std::string& path)
 	return stat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode) && st.st_size > 0;
 }
 
+// (AI-assisted) Some PS5 payload filesystem shims can open an uploaded file
+// before its metadata becomes visible through stat(). Trust actual readable
+// file bytes for ROM-side artwork, while preserving the cheap stat fast path.
+bool IsReadableSibling(const std::string& path)
+{
+	if (IsCoverFile(path)) return true;
+	FILE* f = std::fopen(path.c_str(), "rb");
+	if (!f) return false;
+	const int first = std::fgetc(f);
+	std::fclose(f);
+	if (first == EOF) return false;
+	std::printf("[covers] sibling stat bypassed, readable bytes at: %s\n", path.c_str());
+	return true;
+}
+
+// (AI-assisted) On an explicit Triangle retry, show exactly why a user JPG
+// wasn't considered: the ROM basename, actual folder entries, sizes and
+// stat/fopen results. Keep this outside the per-frame hot-upload poll.
+void TraceSiblingCover(const GameInfo& g)
+{
+	const size_t slash = g.path.rfind('/');
+	if (slash == std::string::npos || slash == 0) return;
+	const std::string dir=g.path.substr(0,slash);
+	const std::string rom=g.path.substr(slash+1);
+	const size_t dot=rom.rfind('.');
+	const std::string stem=dot==std::string::npos?rom:rom.substr(0,dot);
+	std::printf("[covers] sibling diagnose: rom='%s' dir='%s' stem='%s'\n",
+		rom.c_str(),dir.c_str(),stem.c_str());
+	for (const char* ext : kImageExts) {
+		const std::string path=dir+"/"+stem+ext;
+		struct stat st{};
+		errno=0;
+		const int stat_rc=stat(path.c_str(),&st);
+		const int stat_err=errno;
+		FILE* input=std::fopen(path.c_str(),"rb");
+		int first=-1;
+		if(input){first=std::fgetc(input);std::fclose(input);}
+		std::printf("[covers] sibling probe: '%s' stat=%d errno=%d size=%lld first_byte=%d\n",
+			path.c_str(),stat_rc,stat_err,
+			static_cast<long long>(stat_rc==0?st.st_size:-1),first);
+	}
+	DIR* d=opendir(dir.c_str());
+	if(!d) {std::printf("[covers] sibling list failed: errno=%d\n",errno);std::fflush(stdout);return;}
+	unsigned count=0;
+	while(const dirent* entry=readdir(d)) {
+		const std::string name=entry->d_name;
+		const size_t dot=name.rfind('.');
+		if(dot==std::string::npos)continue;
+		const std::string ext=LowerAscii(name.substr(dot));
+		if(ext!=".jpg"&&ext!=".jpeg"&&ext!=".png")continue;
+		if(++count<=24) {
+			struct stat st{};
+			const std::string path=dir+"/"+name;
+			const int rc=stat(path.c_str(),&st);
+			std::printf("[covers] sibling listed image: '%s' chars=%zu bytes=%lld stat_rc=%d\n",
+				name.c_str(),name.size(),static_cast<long long>(rc==0?st.st_size:-1),rc);
+		}
+	}
+	closedir(d);
+	std::printf("[covers] sibling images found in folder: %u\n",count);
+	std::fflush(stdout);
+}
+
 // A 404 from the cover server in the last two weeks (<serial>.missing in the cache).
 // (AI-assisted) v3 invalidates stale misses from pre-fuzzy matching;
 // previously unmatched numbered dumps must be retried automatically after this update.
@@ -361,13 +424,17 @@ bool CoverFinder::Lookup(const std::string& dir, const std::string& base, const 
 	for (const char* ext : kImageExts)
 	{
 		std::string candidate = dir + "/" + base + ext;
-		if (!IsCoverFile(candidate))
+		const bool sibling = std::strcmp(source,"beside")==0;
+		const auto usable = [&](const std::string& path) {
+			return sibling ? IsReadableSibling(path) : IsCoverFile(path);
+		};
+		if (!usable(candidate))
 		{
 			const auto it = names.find(lower + ext);
 			if (it == names.end())
 				continue;
 			candidate = dir + "/" + it->second;
-			if (!IsCoverFile(candidate))
+			if (!usable(candidate))
 				continue;
 		}
 		out.push_back({candidate, source});
@@ -869,7 +936,7 @@ void CoverService::RunWindow()
         }
         return false;
     };
-    std::printf("[covers] bounded mode: radius=%d, queue<=8, library=%d\n",m_cfg.window_radius,n);
+    std::printf("[covers] bounded mode: radius=%d, queue<=8, library=%d, sibling-diagnostic=r4\n",m_cfg.window_radius,n);
     int previous_selection=-1;
     while(!m_stop) {
         int refresh=-1;
@@ -882,6 +949,8 @@ void CoverService::RunWindow()
             CoverImage updated;
             bool upgrade=true;
             const bool local_found=FindLocalCover(finder,refresh,updated,upgrade);
+            if(!local_found || std::strcmp(updated.source,"beside")!=0)
+                TraceSiblingCover(game);
             if(local_found && std::strcmp(updated.source,"beside")==0){
                 updated.game=refresh;
                 updated.kind=CoverImage::Cover;
