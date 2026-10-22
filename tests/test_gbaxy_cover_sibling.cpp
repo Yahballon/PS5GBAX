@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 namespace fs = std::filesystem;
@@ -74,13 +75,37 @@ int main(int argc, char** argv) {
         Game(games, "missing.7z", "missing", "GBA-1234"));
     assert(best.path == (manual / "GBA-1234.jpg").string());
 
-    // Newly copied ROM-side art appears when a fresh finder is created
-    // (as Triangle does in the bounded cover worker).
+    // Test a directory that was indexed before a cover was uploaded.
+    // A new exact-cased file must be detected even by the same old finder.
     const auto late = Game(games, "added.zip", "added", "GBA-LATE");
-    assert(fe::CoverFinder(manual.string(), cache.string()).Best(late).path.empty());
-    Put(games / "ADDED.JPG");
-    best = fe::CoverFinder(manual.string(), cache.string()).Best(late);
-    assert(best.path == (games / "ADDED.JPG").string());
+    fe::CoverFinder cached(manual.string(), cache.string());
+    assert(cached.FindBeside(late).empty());
+    Put(games / "added.jpg");
+    auto direct = cached.FindBeside(late);
+    assert(direct.size() == 1 && direct[0].path == (games / "added.jpg").string());
 
-    std::puts("PASS same-folder PNG/JPG/JPEG overrides for GBA/ZIP/7z, extension cases, priority, offline prefetch, Triangle rediscovery");
+    // A fresh finder also notices a newly uploaded uppercase extension.
+    const auto upper = Game(games, "another.7z", "another", "GBA-UPPER");
+    assert(fe::CoverFinder(manual.string(), cache.string()).FindBeside(upper).empty());
+    Put(games / "ANOTHER.JPG");
+    best = fe::CoverFinder(manual.string(), cache.string()).Best(upper);
+    assert(best.path == (games / "ANOTHER.JPG").string());
+
+    // The real PNG/JPEG samples are written by the Python harness, proving
+    // both codecs work in the same decoder the console uses.
+    for (const std::string ext : {".png", ".jpg"}) {
+        const fs::path sample = games / ("actual-art" + ext);
+        std::ifstream input(sample, std::ios::binary);
+        assert(input.good());
+        std::vector<uint8_t> encoded((std::istreambuf_iterator<char>(input)), {});
+        fe::CoverImage image;
+        assert(fe::CoverService::Decode(encoded, 1024, image));
+        assert(image.width == 20 && image.height == 20);
+        assert(image.rgba.size() == 20u * 20 * 4);
+    }
+    const auto valid = Game(games, "actual-art.gba", "actual-art", "GBA-JPEG");
+    assert(fe::CoverFinder(manual.string(), cache.string()).Best(valid).path ==
+           (games / "actual-art.png").string());
+
+    std::puts("PASS same-folder PNG/JPG/JPEG overrides for GBA/ZIP/7z, extension cases, priority, offline prefetch, stale dir cache, valid PNG/JPEG decode, Triangle rediscovery");
 }
