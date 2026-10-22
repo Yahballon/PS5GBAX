@@ -381,6 +381,17 @@ std::vector<CoverFile> CoverFinder::Find(const GameInfo& g)
 	return Search(g, false);
 }
 
+// (AI-assisted) Only sibling artwork; no cache files or downloads are read
+// when checking whether a user uploaded a new image after app startup.
+std::vector<CoverFile> CoverFinder::FindBeside(const GameInfo& g)
+{
+	std::vector<CoverFile> out;
+	const size_t slash = g.path.rfind('/');
+	if (slash != std::string::npos && slash > 0)
+		Lookup(g.path.substr(0, slash), RomCoverStem(g), "beside", out);
+	return out;
+}
+
 CoverFile CoverFinder::Best(const GameInfo& g)
 {
 	std::vector<CoverFile> first = Search(g, true);
@@ -400,11 +411,11 @@ std::vector<CoverFile> CoverFinder::Search(const GameInfo& g, bool first_only)
 	// marioland2.GBA, marioland2.zip and marioland2.7z all match
 	// marioland2.PNG/JPG/JPEG in the very same directory.
 	// This is an explicit filename match, not a Libretro or fuzzy match.
-	const size_t slash = g.path.rfind('/');
-	if (slash != std::string::npos && slash > 0)
-		Lookup(g.path.substr(0, slash), RomCoverStem(g), "beside", out);
-	if (done())
-		return out;
+	for (const CoverFile& cover : FindBeside(g))
+	{
+		out.push_back(cover);
+		if (done()) return out;
+	}
 	// 2. The manual covers folder, matched case-insensitively too.
 	if (!m_manual_dir.empty())
 		for (const std::string& n : names)
@@ -664,12 +675,12 @@ int CoverService::NextGame(const std::vector<bool>& done) const
 	return best;
 }
 
-bool CoverService::FindLocalCover(CoverFinder& finder, int index, CoverImage& out, bool& upgrade)
+bool CoverService::FindLocalCover(CoverFinder& finder, int index, CoverImage& out, bool& upgrade, bool beside_only)
 {
 	const GameInfo& g = m_games[static_cast<size_t>(index)];
 	std::vector<uint8_t> bytes;
 	// The first file that decodes, best place first (CoverFinder).
-	for (const CoverFile& f : finder.Find(g))
+	for (const CoverFile& f : (beside_only ? finder.FindBeside(g) : finder.Find(g)))
 	{
 		const bool beside = std::strcmp(f.source, "beside") == 0;
 		if (!ReadFile(f.path, bytes))
@@ -846,6 +857,9 @@ void CoverService::RunWindow()
 {
     const int n=static_cast<int>(m_games.size());
     std::vector<bool> painted(n,false),local(n,false),want(n,false),attempted(n,false);
+    std::vector<bool> beside_loaded(n,false);
+    std::time_t last_sibling_probe=0;
+    int last_sibling_selection=-1;
     CoverFinder finder(m_cfg.manual_dir,m_cfg.cache_dir);
     auto deliver=[&](CoverImage& image) {
         while(!m_stop) {
@@ -872,7 +886,7 @@ void CoverService::RunWindow()
                 updated.game=refresh;
                 updated.kind=CoverImage::Cover;
                 if(!deliver(updated))break;
-                local[refresh]=true;want[refresh]=false;attempted[refresh]=true;
+                local[refresh]=true;beside_loaded[refresh]=true;want[refresh]=false;attempted[refresh]=true;
                 std::printf("[covers] refresh %s: same-folder artwork loaded (no network)\n",game.file.c_str());
                 std::fflush(stdout);
                 continue;
@@ -915,7 +929,10 @@ void CoverService::RunWindow()
         next=nearest(local);
         if(next>=0) {
             CoverImage cover;bool upgrade=true;
-            if(FindLocalCover(finder,next,cover,upgrade)){cover.game=next;cover.kind=CoverImage::Cover;if(!deliver(cover))break;}
+            if(FindLocalCover(finder,next,cover,upgrade)){
+                beside_loaded[next]=std::strcmp(cover.source,"beside")==0;
+                cover.game=next;cover.kind=CoverImage::Cover;if(!deliver(cover))break;
+            }
             local[next]=true;want[next]=upgrade&&MayDownload(next);continue;
         }
         if(!m_offline) {
@@ -927,6 +944,29 @@ void CoverService::RunWindow()
                 {std::lock_guard<std::mutex> lock(m_mutex);++m_download_total;}
                 if(DownloadCover(next,cover)){finder=CoverFinder(m_cfg.manual_dir,m_cfg.cache_dir);cover.game=next;cover.kind=CoverImage::Cover;if(!deliver(cover))break;}
                 continue;
+            }
+        }
+        // (AI-assisted) Detect a local PNG/JPG uploaded AFTER the first scan,
+        // including when an earlier HTTP 404 already exhausted retries. Poll
+        // just the selected ROM at most once every five seconds; do not touch
+        // networking, trigger a full library scan or reload existing artwork.
+        if(selected>=0 && selected<n && local[selected] && !beside_loaded[selected] &&
+           m_games[selected].path.rfind("nfs://",0)!=0) {
+            const std::time_t now=std::time(nullptr);
+            if(selected!=last_sibling_selection || now-last_sibling_probe>=5) {
+                last_sibling_selection=selected;
+                last_sibling_probe=now;
+                CoverFinder fresh(m_cfg.manual_dir,m_cfg.cache_dir);
+                CoverImage image;bool upgrade=true;
+                if(FindLocalCover(fresh,selected,image,upgrade,true)) {
+                    image.game=selected;image.kind=CoverImage::Cover;
+                    if(!deliver(image))break;
+                    beside_loaded[selected]=true;
+                    want[selected]=false;
+                    std::printf("[covers] hot-upload same-folder cover applied: %s\n",
+                        m_games[selected].file.c_str());
+                    std::fflush(stdout);
+                }
             }
         }
         usleep(10000);
