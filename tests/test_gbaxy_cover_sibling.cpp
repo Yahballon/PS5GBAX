@@ -63,6 +63,40 @@ int main(int argc, char** argv) {
     auto best = fe::CoverFinder(manual.string(), cache.string()).Best(dotted);
     assert(best.path == (games / "Super.Mario.v2 (USA).pNg").string());
 
+    // (AI-assisted) Actual PS5 bug report: the GUI uploaded the cover
+    // as "...Hack)..jpg" while the ROM ended in "...Hack).gba".
+    // Accept exactly one accidental extra dot (also with uppercase JPG).
+    const std::string violet="Pokemon Ultra Violet (1.22) LSA (Fire Red Hack)";
+    Put(games / (violet + "..jpg"));
+    auto violet_game=Game(games, violet + ".gba", violet, "GBA-7B502EB5");
+    fe::CoverFinder violet_finder(manual.string(), cache.string());
+    auto violet_covers=violet_finder.FindBeside(violet_game);
+    assert(violet_covers.size()==1);
+    assert(violet_covers[0].path==(games / (violet+"..jpg")).string());
+    assert(std::string(violet_covers[0].source)=="beside");
+    assert(fe::CoverFinder(manual.string(), cache.string()).Best(violet_game).path==
+           (games / (violet+"..jpg")).string());
+    fe::CoverConfig violet_cfg;
+    violet_cfg.manual_dir=manual.string();violet_cfg.cache_dir=cache.string();
+    assert(fe::CoverService::MissingCovers({violet_game},violet_cfg).empty());
+
+    // Native normal names win against a fallback with an extra dot, across
+    // extensions: a correct JPG takes priority over accidentally named PNG.
+    Put(games / (violet + ".jpg"));
+    Put(games / (violet + "..PNG"));
+    auto best_normal=fe::CoverFinder(manual.string(),cache.string()).Best(violet_game);
+    assert(best_normal.path==(games / (violet+".jpg")).string());
+
+    // If only the accidental extra-dot extension remains, the case-insensitive
+    // fallback works for ZIP and 7z just as it does for GBA.
+    fs::remove(games/(violet+".jpg"));
+    fs::remove(games/(violet+"..jpg"));
+    for (const std::string extension : {".gba", ".zip", ".7z"}) {
+        auto game=Game(games,violet+extension,violet,"GBA-7B502EB5");
+        auto hit=fe::CoverFinder(manual.string(),cache.string()).Best(game);
+        assert(hit.path==(games/(violet+"..PNG")).string());
+    }
+
     // Empty custom cover is ignored; matching JPEG is selected instead.
     Put(games / "invalid.png", "");
     Put(games / "invalid.jpeg");
@@ -113,5 +147,5 @@ int main(int argc, char** argv) {
     assert(fe::CoverFinder(manual.string(), cache.string()).Best(valid).path ==
            (games / "actual-art.png").string());
 
-    std::puts("PASS same-folder PNG/JPG/JPEG overrides for GBA/ZIP/7z, extension cases, priority, offline prefetch, stale dir cache, valid PNG/JPEG decode, Triangle rediscovery");
+    std::puts("PASS same-folder PNG/JPG/JPEG overrides for GBA/ZIP/7z, extension cases, priority, offline prefetch, stale dir cache, valid PNG/JPEG decode, accidental double-dot filenames, Triangle rediscovery");
 }
