@@ -24,7 +24,6 @@ static fe::GameInfo Game(const fs::path& dir, const std::string& file,
     g.serial = serial;
     return g;
 }
-static void Check(const fe::CoverFinder&); // no mutation of caller
 int main(int argc, char** argv) {
     assert(argc == 2);
     const fs::path root(argv[1]), games = root / "games",
