@@ -241,7 +241,7 @@ Press **Triangle** on the shelf to retry the selected game's cover (R2 also work
 /data/PS5GBA/games/marioland2.png
 ~~~
 
-The same rule works for `.zip` and `.7z` ROMs, for example `marioland2.7z` plus `marioland2.jpg`. It also works for USB ROM folders. Name comparison is case-insensitive (`.PNG`, `.JPG` and `.JPEG` are accepted), and PNG is preferred before JPG and JPEG. A corrupt or empty image falls back to other candidates.
+The same rule works for `.zip` and `.7z` ROMs, for example `marioland2.7z` plus `marioland2.jpg`. It also works for USB ROM folders. Name comparison is case-insensitive (`.PNG`, `.JPG` and `.JPEG` are accepted), and PNG is preferred before JPG and JPEG. A corrupt or empty image falls back to other candidates. If a file-manager accidentally adds an extra dot (`marioland2..jpg`), the ROM-folder search accepts that as a fallback, but a correctly named local image always has higher priority. Renaming to the single-dot spelling is still recommended.
 
 **Cover search order:** image next to the ROM → `/data/PS5GBA/covers/` → USB covers folder → cached download → online Libretro exact/fuzzy matching. For the shared covers folder, use the game file stem or displayed GBA serial as the image name. A same-folder user image is never overwritten by automatic cover downloads.
 
