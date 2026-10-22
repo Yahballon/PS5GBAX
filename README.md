@@ -12,6 +12,11 @@ PS5GBA is a native PS5 homebrew Game Boy Advance emulator using **mGBA 0.10.5**.
 
 ## GBAXY v2.3.0 — 7z archives, smarter cover matching, local artwork and stability
 
+- **New ROM format:** Safe loading of LZMA/LZMA2 7z archives containing exactly one GBA game, alongside GBA and ZIP.
+- **Better online cover matching:** Libretro index, scene-dump numbers and region tags, Pokémon variants and conservative fuzzy title matching.
+- **Custom covers beside ROMs:** Exact same-basename PNG/JPG/JPEG next to GBA/ZIP/7z takes priority over cached and downloaded covers; double-dot spelling is *not* accepted.
+- **Refresh art with Triangle:** Retry local covers, including images uploaded after the app started, and then retry online only if no local match is found.
+- **Settings stability:** Guard the first per-game settings save and synchronize the game-to-menu transition.
 - **Safe exit:** The main-menu Circle → Cross confirmation now asks the PS5 shell to close the title with `sceSystemServiceLoadExec("exit", nullptr)` instead of libc `exit(0)`, which caused **SIGSYS (signal 12)** on PS5.
 - **CRT fallback:** Also intercepts unexpected normal `main()` returns to prevent a second SIGSYS crash.
 - **No loss of data:** Title ID `PPSA99209`, game folders, cover cache, saves and themes are unchanged.
