@@ -6068,7 +6068,7 @@ inline std::vector<std::string> CoverUrls(const fe::GameInfo& game) {
     if(matches.empty() && !key.empty()) {
         const auto fuzzy=CoverBestFuzzyKey(key,cover_names,sizeof(cover_names)/sizeof(cover_names[0]));
         if(!fuzzy.key.empty()) {
-            std::printf("[covers] fuzzy match: '%s' -> '%s' (%d/1000; next %d)\\n",
+            std::printf("[covers] fuzzy match: '%s' -> '%s' (%d/1000; next %d)\n",
                 cleaned.c_str(),fuzzy.key.c_str(),fuzzy.score,fuzzy.runner_up);
             for(const auto& entry:cover_names) {
                 if(fuzzy.key!=entry.key)continue;
@@ -6083,7 +6083,7 @@ inline std::vector<std::string> CoverUrls(const fe::GameInfo& game) {
                 matches.emplace_back(score,filename);
             }
         } else if(fuzzy.score>=840) {
-            std::printf("[covers] ambiguous name: '%s' (best %d, next %d); skipping fuzzy match\\n",
+            std::printf("[covers] ambiguous name: '%s' (best %d, next %d); skipping fuzzy match\n",
                 cleaned.c_str(),fuzzy.score,fuzzy.runner_up);
         }
     }
