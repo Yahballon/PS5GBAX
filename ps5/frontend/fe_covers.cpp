@@ -135,19 +135,20 @@ void TraceSiblingCover(const GameInfo& g)
 	const std::string stem=dot==std::string::npos?rom:rom.substr(0,dot);
 	std::printf("[covers] sibling diagnose: rom='%s' dir='%s' stem='%s'\n",
 		rom.c_str(),dir.c_str(),stem.c_str());
-	for (const char* ext : kImageExts) {
-		const std::string path=dir+"/"+stem+ext;
-		struct stat st{};
-		errno=0;
-		const int stat_rc=stat(path.c_str(),&st);
-		const int stat_err=errno;
-		FILE* input=std::fopen(path.c_str(),"rb");
-		int first=-1;
-		if(input){first=std::fgetc(input);std::fclose(input);}
-		std::printf("[covers] sibling probe: '%s' stat=%d errno=%d size=%lld first_byte=%d\n",
-			path.c_str(),stat_rc,stat_err,
-			static_cast<long long>(stat_rc==0?st.st_size:-1),first);
-	}
+	for (unsigned pass=0;pass<2;++pass)
+		for (const char* ext : kImageExts) {
+			const std::string path=dir+"/"+stem+(pass?".":"")+ext;
+			struct stat st{};
+			errno=0;
+			const int stat_rc=stat(path.c_str(),&st);
+			const int stat_err=errno;
+			FILE* input=std::fopen(path.c_str(),"rb");
+			int first=-1;
+			if(input){first=std::fgetc(input);std::fclose(input);}
+			std::printf("[covers] sibling probe: '%s' stat=%d errno=%d size=%lld first_byte=%d\n",
+				path.c_str(),stat_rc,stat_err,
+				static_cast<long long>(stat_rc==0?st.st_size:-1),first);
+		}
 	DIR* d=opendir(dir.c_str());
 	if(!d) {std::printf("[covers] sibling list failed: errno=%d\n",errno);std::fflush(stdout);return;}
 	unsigned count=0;
@@ -415,30 +416,40 @@ bool CoverFinder::Lookup(const std::string& dir, const std::string& base, const 
 {
 	if (dir.empty() || base.empty())
 		return false;
-	// Try an exact real filesystem path FIRST: this detects an upload
-	// without relying on List(dir), which may have been cached before the
-	// upload. A fresh finder still handles mixed-case file extensions.
+	// The ROM filename is authoritative. Prefer ordinary names for ALL
+	// extensions before considering the common upload typo "Game..jpg".
+	// The typo recovery applies only to images next to a ROM, never to
+	// unrelated cache or shared cover names.
 	const Names& names = List(dir);
 	const std::string lower = LowerAscii(base);
+	const bool sibling = std::strcmp(source, "beside") == 0;
+	const auto usable = [&](const std::string& path) {
+		return sibling ? IsReadableSibling(path) : IsCoverFile(path);
+	};
 	bool found = false;
-	for (const char* ext : kImageExts)
+	for (unsigned pass = 0; pass < (sibling ? 2u : 1u); ++pass)
 	{
-		std::string candidate = dir + "/" + base + ext;
-		const bool sibling = std::strcmp(source,"beside")==0;
-		const auto usable = [&](const std::string& path) {
-			return sibling ? IsReadableSibling(path) : IsCoverFile(path);
-		};
-		if (!usable(candidate))
+		// On pass 2, recover exactly ONE accidental extra '.' before
+		// .png/.jpg/.jpeg. This is not fuzzy matching of game titles.
+		const std::string extra_dot = pass ? "." : "";
+		for (const char* ext : kImageExts)
 		{
-			const auto it = names.find(lower + ext);
-			if (it == names.end())
-				continue;
-			candidate = dir + "/" + it->second;
+			const std::string suffix = extra_dot + ext;
+			std::string candidate = dir + "/" + base + suffix;
 			if (!usable(candidate))
-				continue;
+			{
+				const auto it = names.find(lower + suffix);
+				if (it == names.end())
+					continue;
+				candidate = dir + "/" + it->second;
+				if (!usable(candidate))
+					continue;
+			}
+			if (pass)
+				std::printf("[covers] recovered double-dot ROM cover: %s\n", candidate.c_str());
+			out.push_back({candidate, source});
+			found = true;
 		}
-		out.push_back({candidate, source});
-		found = true;
 	}
 	return found;
 }
@@ -936,7 +947,7 @@ void CoverService::RunWindow()
         }
         return false;
     };
-    std::printf("[covers] bounded mode: radius=%d, queue<=8, library=%d, sibling-diagnostic=r4\n",m_cfg.window_radius,n);
+    std::printf("[covers] bounded mode: radius=%d, queue<=8, library=%d, sibling-diagnostic=r5\n",m_cfg.window_radius,n);
     int previous_selection=-1;
     while(!m_stop) {
         int refresh=-1;
