@@ -141,14 +141,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 gba/tools/verify_package.py
-          cp gba/build-shelf/GBAXY-v2.2.1-by-YAHBALLON.zip gba/build-shelf/PPSA99209.zip
+          cp gba/build-shelf/GBAXY-v2.3.0-by-YAHBALLON.zip gba/build-shelf/PPSA99209.zip
           cd gba/build-shelf
           sha256sum PPSA99209.zip > PPSA99209.zip.sha256
           unzip -tq PPSA99209.zip
       - name: Upload actual compiled PS5 package
         uses: actions/upload-artifact@v4
         with:
-          name: GBAXY-v2.2.1-PPSA99209
+          name: GBAXY-v2.3.0-PPSA99209
           path: |
             gba/build-shelf/PPSA99209.zip
             gba/build-shelf/PPSA99209.zip.sha256
@@ -163,7 +163,7 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             tag="${GITHUB_REF#refs/tags/}"
           else
-            tag="v2.2.1"
+            tag="v2.3.0"
           fi
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "::error::Release $tag exists; refusing to silently overwrite it."

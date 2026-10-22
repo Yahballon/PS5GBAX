@@ -1,3 +1,25 @@
+# GBAXY v2.3.0 by YAHBALLON
+
+(AI-assisted) Feature and stability release for PS5 Game Boy Advance homebrew (PPSA99209).
+
+## Improvements
+
+- **7z ROMs (Issue #2):** load single-GBA LZMA/LZMA2 archives from local storage, USB or NFS, with memory bounds and archive validation; existing `.gba` and `.zip` support remains.
+- **Smarter cover search:** the Libretro GBA artwork index supports scene-dump prefixes (e.g. `1636 -`), No-Intro/GoodTools region labels, Pokemon aliases, and conservative fuzzy name matching that rejects ambiguous sequels.
+- **Local ROM-folder cover override:** `My Game.gba`, `My Game.zip` or `My Game.7z` uses `My Game.png`, `My Game.jpg` or `My Game.jpeg` in the same folder. Image filenames are matched case-insensitively; PNG takes priority. Local covers override manual covers, cached thumbnails and automatic download. **Exact basename matching remains required** (the temporary double-dot filename workaround has been removed).
+- **Triangle: Retry cover** updates the selected artwork, checks the same ROM folder first (also when offline), and can discover an image uploaded while GBAXY is already open.
+- **Settings and stability:** avoid dangling settings-row references on first save and synchronize the GPU when returning from a game to the shelf. The console exit fix from v2.2.1 remains.
+- **Diagnostics:** clearer cover decoding and local-file errors in `/data/PS5GBA/logs/boot.log`.
+
+## Installation
+
+Download `PPSA99209.zip` from the release assets, extract the `PPSA99209` directory and copy it to `/data/homebrew/`. Preserve `/data/PS5GBA/` to keep ROMs, save games, screenshots, settings and cache. The automatically generated GitHub source ZIP is not an installable application.
+
+## Verification
+
+The user reports that the tested homebrew and local cover detection now work on PS5. CI performs native PS5 compilation, source checks, archive tests and ZIP integrity checks before publishing. The specific published v2.3.0 package still requires on-console regression testing after version bump.
+
+---
 # GBAXY v2.2.1 by YAHBALLON
 
 ## Fix: PS5 SIGSYS crash when closing GBAXY
