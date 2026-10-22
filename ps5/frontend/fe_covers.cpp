@@ -809,7 +809,8 @@ int CoverService::Prefetch(const std::vector<GameInfo>& games, const std::vector
 
 // (AI-assisted) Keep only nearby artwork live. Downloads remain cached on disk.
 bool CoverService::Refresh(int index){
-    if(index<0||static_cast<size_t>(index)>=m_games.size()||m_stop||!m_cfg.allow_download||m_cfg.window_radius<=0)return false;
+    // A retry also reloads a newly added or replaced local image, even offline.
+    if(index<0||static_cast<size_t>(index)>=m_games.size()||m_stop||m_cfg.window_radius<=0)return false;
     std::lock_guard<std::mutex> lock(m_mutex);
     if(std::find(m_refresh_requests.begin(),m_refresh_requests.end(),index)==m_refresh_requests.end())m_refresh_requests.push_back(index);
     return true;
@@ -832,11 +833,39 @@ void CoverService::RunWindow()
     int previous_selection=-1;
     while(!m_stop) {
         int refresh=-1;
-        {std::lock_guard<std::mutex> lock(m_mutex);if(!m_refresh_requests.empty()){refresh=m_refresh_requests.front();m_refresh_requests.pop_front();m_offline=false;++m_download_total;}}
+        {std::lock_guard<std::mutex> lock(m_mutex);if(!m_refresh_requests.empty()){refresh=m_refresh_requests.front();m_refresh_requests.pop_front();m_offline=false;}}
         if(refresh>=0){
-            // (AI-assisted) Bypass cached artwork and old 404 markers, retaining the old image on failure.
-            const auto& game=m_games[refresh];unlink((m_cfg.cache_dir+"/"+game.serial+".gbaxy-covers-v3.missing").c_str());
-            CoverImage updated;std::printf("[covers] refresh selected: %s\n",game.title.c_str());
+            // (AI-assisted) Re-scan the ROM folder on Triangle: a PNG/JPG
+            // copied there after startup must immediately replace cached art.
+            finder=CoverFinder(m_cfg.manual_dir,m_cfg.cache_dir);
+            const auto& game=m_games[refresh];
+            CoverImage updated;
+            bool upgrade=true;
+            const bool local_found=FindLocalCover(finder,refresh,updated,upgrade);
+            if(local_found && std::strcmp(updated.source,"beside")==0){
+                updated.game=refresh;
+                updated.kind=CoverImage::Cover;
+                if(!deliver(updated))break;
+                local[refresh]=true;want[refresh]=false;attempted[refresh]=true;
+                std::printf("[covers] refresh %s: same-folder artwork loaded (no network)\n",game.file.c_str());
+                std::fflush(stdout);
+                continue;
+            }
+            if(!m_cfg.allow_download || !m_download){
+                // Offline retry can still refresh a changed manual/cache cover.
+                if(local_found){
+                    updated.game=refresh;updated.kind=CoverImage::Cover;
+                    if(!deliver(updated))break;
+                    local[refresh]=true;want[refresh]=upgrade&&MayDownload(refresh);
+                }
+                std::printf("[covers] refresh %s: downloads disabled; local-only\n",game.file.c_str());
+                std::fflush(stdout);
+                continue;
+            }
+            // No same-folder image: explicitly retry online, ignoring old 404 markers.
+            {std::lock_guard<std::mutex> lock(m_mutex);++m_download_total;}
+            unlink((m_cfg.cache_dir+"/"+game.serial+".gbaxy-covers-v3.missing").c_str());
+            std::printf("[covers] refresh selected: %s (online)\n",game.title.c_str());
             const bool okay=DownloadCover(refresh,updated);
             if(okay){updated.game=refresh;updated.kind=CoverImage::Cover;if(!deliver(updated))break;finder=CoverFinder(m_cfg.manual_dir,m_cfg.cache_dir);local[refresh]=true;want[refresh]=false;}
             attempted[refresh]=true;
