@@ -38,7 +38,7 @@ struct CoverImage
 	std::vector<uint8_t> rgba;
 	float glow[3] = {0, 0, 0};
 	bool has_glow = false;
-	const char* source = ""; // "manual", "cache", "download"
+	const char* source = ""; // "beside" (same-folder ROM cover), "manual", "cache", "download"
 };
 
 struct CoverConfig
@@ -63,20 +63,20 @@ using DownloadFn = std::function<int(const std::string& url, std::vector<uint8_t
 struct CoverFile
 {
 	std::string path;
-	const char* source = ""; // "manual", "beside", "drive", "cache" or "art"
+	const char* source = ""; // "beside", "manual", "drive", "cache" or "art"
 };
 
-// vk-285-110: where a game's cover can be, best first:
-//   1. manual: the covers folder, <serial>, <file name> or <title> .jpg/.png/.jpeg (as before);
-//   2. beside: next to the disc image, under the image's name ("Game.iso" -> "Game.jpg", "Game.png");
-//   3. drive:  a "covers" folder at the root of the game's USB drive, names as in 1;
-//   4. cache:  a download (<serial>.jpg);
-//   5. art:    Open PS2 Loader's ART folder at the root of the game's USB drive, "<ELF name>_COV"
-//              .jpg/.png ("SLUS_213.51_COV.jpg"). These are often small, so a download still replaces
-//              them.
-// 2, 3 and 5 match names in any letter case (USB drives are FAT32 or exFAT). Only files that aren't
-// empty count. Each folder is listed once per finder: keep one finder for a whole pass over the
-// games, on one thread.
+// (AI-assisted) Where a game's cover can be, best first:
+//   1. beside: <ROM-basename>.png/.jpg/.jpeg in exactly the same folder
+//      as the .gba, .zip or .7z ROM; this user override always wins;
+//   2. manual: the shared covers folder, by serial, stem or display title;
+//   3. drive:  a covers folder at the root of a USB drive;
+//   4. cache:  previously downloaded cover, stored as <serial>.jpg;
+//   5. art:    legacy OPL ART cover for the game.
+// Local name matches are case-insensitive, with PNG first, JPG second and JPEG
+// third. Broken PNGs are skipped in favor of remaining candidates. Files are
+// looked up without fuzzy matching; fuzzy Libretro matching is online-only.
+// Directory contents are cached per search pass (new finder on Triangle retry).
 class CoverFinder
 {
 public:
