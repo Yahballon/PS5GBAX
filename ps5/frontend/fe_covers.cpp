@@ -11,6 +11,7 @@
 #include "fe_i18n.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -351,19 +352,26 @@ bool CoverFinder::Lookup(const std::string& dir, const std::string& base, const 
 {
 	if (dir.empty() || base.empty())
 		return false;
+	// Try an exact real filesystem path FIRST: this detects an upload
+	// without relying on List(dir), which may have been cached before the
+	// upload. A fresh finder still handles mixed-case file extensions.
 	const Names& names = List(dir);
-	if (names.empty())
-		return false;
 	const std::string lower = LowerAscii(base);
 	bool found = false;
 	for (const char* ext : kImageExts)
 	{
-		const auto it = names.find(lower + ext);
-		if (it != names.end() && IsCoverFile(dir + "/" + it->second))
+		std::string candidate = dir + "/" + base + ext;
+		if (!IsCoverFile(candidate))
 		{
-			out.push_back({dir + "/" + it->second, source});
-			found = true;
+			const auto it = names.find(lower + ext);
+			if (it == names.end())
+				continue;
+			candidate = dir + "/" + it->second;
+			if (!IsCoverFile(candidate))
+				continue;
 		}
+		out.push_back({candidate, source});
+		found = true;
 	}
 	return found;
 }
@@ -662,14 +670,32 @@ bool CoverService::FindLocalCover(CoverFinder& finder, int index, CoverImage& ou
 	std::vector<uint8_t> bytes;
 	// The first file that decodes, best place first (CoverFinder).
 	for (const CoverFile& f : finder.Find(g))
-		if (ReadFile(f.path, bytes) && Decode(bytes, 1024, out))
+	{
+		const bool beside = std::strcmp(f.source, "beside") == 0;
+		if (!ReadFile(f.path, bytes))
 		{
-			out.source = f.source;
-			if (std::strcmp(f.source, "beside") == 0)
-				std::printf("[covers] local ROM cover: %s -> %s\n", g.file.c_str(), f.path.c_str());
-			upgrade = std::strcmp(f.source, "art") == 0;
-			return true;
+			if (beside)
+				std::printf("[covers] same-folder image unreadable: %s (errno=%d)\n",
+					f.path.c_str(), errno);
+			continue;
 		}
+		if (!Decode(bytes, 1024, out))
+		{
+			if (beside)
+				std::printf("[covers] same-folder image invalid: %s (%zu bytes, header %02X %02X %02X %02X; decoder: %s)\n",
+					f.path.c_str(), bytes.size(),
+					bytes.size()>0?bytes[0]:0, bytes.size()>1?bytes[1]:0,
+					bytes.size()>2?bytes[2]:0, bytes.size()>3?bytes[3]:0,
+					stbi_failure_reason()?stbi_failure_reason():"image smaller than 16x16 or unsupported format");
+			continue;
+		}
+		out.source = f.source;
+		if (beside)
+			std::printf("[covers] same-folder cover LOADED: %s -> %s (%dx%d)\n",
+				g.file.c_str(), f.path.c_str(), out.width, out.height);
+		upgrade = std::strcmp(f.source, "art") == 0;
+		return true;
+	}
 	upgrade = true;
 	return false;
 }
