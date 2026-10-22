@@ -99,7 +99,13 @@ int main(int argc, char** argv) {
         assert(input.good());
         std::vector<uint8_t> encoded((std::istreambuf_iterator<char>(input)), {});
         fe::CoverImage image;
-        assert(fe::CoverService::Decode(encoded, 1024, image));
+        const bool decoded=fe::CoverService::Decode(encoded, 1024, image);
+        if(!decoded) std::fprintf(stderr,
+            "FAIL real %s decode: %zu bytes, header %02x %02x %02x %02x (dimensions %dx%d)\\n",
+            ext.c_str(), encoded.size(), encoded.size()>0?encoded[0]:0,
+            encoded.size()>1?encoded[1]:0, encoded.size()>2?encoded[2]:0,
+            encoded.size()>3?encoded[3]:0, image.width, image.height);
+        assert(decoded);
         assert(image.width == 20 && image.height == 20);
         assert(image.rgba.size() == 20u * 20 * 4);
     }
