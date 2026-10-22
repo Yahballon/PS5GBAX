@@ -2,6 +2,8 @@
 // Source: https://thumbnails.libretro.com/Nintendo%20-%20Game%20Boy%20Advance/Named_Boxarts/
 #pragma once
 #include "fe_games.h"
+#include "cover_fuzzy.h"
+#include <cstdio>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -6058,6 +6060,31 @@ inline std::vector<std::string> CoverUrls(const fe::GameInfo& game) {
             if(filename.find("(Rev")!=std::string::npos)score-=3;
             if(filename.find("(Proto")!=std::string::npos)score-=20;
             matches.emplace_back(score,filename);
+        }
+    }
+    // (AI-assisted) Global approximate matching as a fallback AFTER exact
+    // Libretro keys. Use the indexed filenames, not an unbounded internet
+    // search. Refuse ambiguous titles and mismatched sequel numbers.
+    if(matches.empty() && !key.empty()) {
+        const auto fuzzy=CoverBestFuzzyKey(key,cover_names,sizeof(cover_names)/sizeof(cover_names[0]));
+        if(!fuzzy.key.empty()) {
+            std::printf("[covers] fuzzy match: '%s' -> '%s' (%d/1000; next %d)\\n",
+                cleaned.c_str(),fuzzy.key.c_str(),fuzzy.score,fuzzy.runner_up);
+            for(const auto& entry:cover_names) {
+                if(fuzzy.key!=entry.key)continue;
+                const std::string filename=entry.filename;
+                int score=0;
+                if(!region.empty()&&filename.find(region)!=std::string::npos)score+=100;
+                if(filename.find("(USA")!=std::string::npos)score+=30;
+                else if(filename.find("(Europe")!=std::string::npos)score+=20;
+                else if(filename.find("(Japan")!=std::string::npos)score+=10;
+                if(filename.find("(Rev")!=std::string::npos)score-=3;
+                if(filename.find("(Proto")!=std::string::npos)score-=20;
+                matches.emplace_back(score,filename);
+            }
+        } else if(fuzzy.score>=840) {
+            std::printf("[covers] ambiguous name: '%s' (best %d, next %d); skipping fuzzy match\\n",
+                cleaned.c_str(),fuzzy.score,fuzzy.runner_up);
         }
     }
     std::stable_sort(matches.begin(),matches.end(),[](const auto& a,const auto& b){
