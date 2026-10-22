@@ -162,7 +162,7 @@ private:
 	// vk-285-110: the covers on disk for every game first, then the downloads, so a slow or failing
 	// download never holds back a cover that is already there. `upgrade`: a download is still worth
 	// trying (no cover, or only an OPL ART one).
-	bool FindLocalCover(CoverFinder& finder, int index, CoverImage& out, bool& upgrade);
+	bool FindLocalCover(CoverFinder& finder, int index, CoverImage& out, bool& upgrade, bool beside_only = false);
 	bool MayDownload(int index) const;
 	bool DownloadCover(int index, CoverImage& out);
 	int NextGame(const std::vector<bool>& done) const;
