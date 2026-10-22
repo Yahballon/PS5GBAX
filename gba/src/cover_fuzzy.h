@@ -98,7 +98,7 @@ CoverFuzzyResult CoverBestFuzzyKey(const std::string& wanted, const Entry* names
     result.runner_up = candidates.size() >= 2 ? candidates[1].first : -1;
     // Only choose when the next distinct *game title* is clearly worse.
     // Covers with different regions of the same game do not count as rivals.
-    if (result.runner_up < 0 || result.score - result.runner_up >= 55)
+    if (result.runner_up < 0 || result.score - result.runner_up >= 50)
         result.key = candidates.front().second;
     return result;
 }
