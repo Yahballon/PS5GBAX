@@ -85,6 +85,9 @@ public:
 	// The cover files `g` has, best first (empty when none).
 	std::vector<CoverFile> Find(const GameInfo& g);
 
+	// (AI-assisted) Only same-folder artwork; used for lightweight hot-add detection.
+	std::vector<CoverFile> FindBeside(const GameInfo& g);
+
 	// The first of them, or an empty path (stops looking at the first one found).
 	CoverFile Best(const GameInfo& g);
 
