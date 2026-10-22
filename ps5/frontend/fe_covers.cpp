@@ -107,12 +107,12 @@ bool IsCoverFile(const std::string& path)
 }
 
 // A 404 from the cover server in the last two weeks (<serial>.missing in the cache).
-// (AI-assisted) v2 intentionally invalidates stale misses from pre-alias matching;
+// (AI-assisted) v3 invalidates stale misses from pre-fuzzy matching;
 // previously unmatched numbered dumps must be retried automatically after this update.
 bool RecentlyMissing(const std::string& cache_dir, const std::string& serial)
 {
 	struct stat st = {};
-	return stat((cache_dir + "/" + serial + ".gbaxy-covers-v2.missing").c_str(), &st) == 0 &&
+	return stat((cache_dir + "/" + serial + ".gbaxy-covers-v3.missing").c_str(), &st) == 0 &&
 		   std::time(nullptr) - st.st_mtime < 14 * 24 * 3600;
 }
 
@@ -676,7 +676,7 @@ bool CoverService::DownloadCover(int index, CoverImage& out)
 	if (m_offline || m_stop)
 		return false;
 	const std::string cached = m_cfg.cache_dir + "/" + g.serial + ".jpg";
-	const std::string missing = m_cfg.cache_dir + "/" + g.serial + ".gbaxy-covers-v2.missing";
+	const std::string missing = m_cfg.cache_dir + "/" + g.serial + ".gbaxy-covers-v3.missing";
 	std::vector<uint8_t> bytes;
 	std::string url;
 	{
@@ -766,7 +766,7 @@ int CoverService::Prefetch(const std::vector<GameInfo>& games, const std::vector
 		if (status == 200 && !probe.rgba.empty())
 			ok = WriteFileAtomic(cfg.cache_dir + "/" + g.serial + ".jpg", bytes);
 		else if (status == 404)
-			WriteFileAtomic(cfg.cache_dir + "/" + g.serial + ".gbaxy-covers-v2.missing", std::vector<uint8_t>{'4', '0', '4', '\n'});
+			WriteFileAtomic(cfg.cache_dir + "/" + g.serial + ".gbaxy-covers-v3.missing", std::vector<uint8_t>{'4', '0', '4', '\n'});
 		std::printf("[frontend] prefetch %s: %d%s\n", g.serial.c_str(), status,
 			ok ? " (saved)" : (status == 200 ? " (not an image; not kept)" : ""));
 		std::fflush(stdout);
@@ -805,7 +805,7 @@ void CoverService::RunWindow()
         {std::lock_guard<std::mutex> lock(m_mutex);if(!m_refresh_requests.empty()){refresh=m_refresh_requests.front();m_refresh_requests.pop_front();m_offline=false;++m_download_total;}}
         if(refresh>=0){
             // (AI-assisted) Bypass cached artwork and old 404 markers, retaining the old image on failure.
-            const auto& game=m_games[refresh];unlink((m_cfg.cache_dir+"/"+game.serial+".gbaxy-covers-v2.missing").c_str());
+            const auto& game=m_games[refresh];unlink((m_cfg.cache_dir+"/"+game.serial+".gbaxy-covers-v3.missing").c_str());
             CoverImage updated;std::printf("[covers] refresh selected: %s\n",game.title.c_str());
             const bool okay=DownloadCover(refresh,updated);
             if(okay){updated.game=refresh;updated.kind=CoverImage::Cover;if(!deliver(updated))break;finder=CoverFinder(m_cfg.manual_dir,m_cfg.cache_dir);local[refresh]=true;want[refresh]=false;}
