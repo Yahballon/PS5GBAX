@@ -40,7 +40,7 @@ A native Vulkan interface with the supplied blue Game Boy Advance launcher logo.
 - Display output up to **3840 × 2160**, with 1080p selection and display-dependent fallback.
 - **ORIGINAL**, **4K HD SMOOTH** and **4K ENHANCED** graphics modes.
 - Aspect-ratio, stretch and integer scaling, plus adjustable sharpness, contrast and color boost.
-- Automatic Libretro GBA box-art downloads, local cover support and **R2 cover refresh**.
+- Automatic Libretro GBA box-art downloads, ROM-adjacent local cover priority and **Triangle / R2 cover retry**.
 - Cached game library, visible loading progress, library reset/rescan and recent-first ordering.
 - Battery-backed saves and **one save-state slot per ROM**.
 - Configurable GBA buttons and save/load/menu shortcuts, globally or per game.
@@ -232,17 +232,20 @@ Automatic box art uses the [Libretro GBA Named_Boxarts collection](https://thumb
 
 The app includes a **5,959-filename index**, with exact filename and normalized title/region matching. No-Intro-style ROM/ZIP names work best. Matching handles common accents, such as Pokémon, and ignores bracketed tags during normalized lookup. Images are downloaded on demand; the artwork itself is not bundled.
 
-Press **R2** on the shelf to refresh the selected cover. The previous image is retained if the refresh fails.
+Press **Triangle** on the shelf to retry the selected game's cover (R2 also works). This checks the ROM directory again, even while offline, before attempting a download. If a same-folder cover exists, it always wins and no network request is made. The previous image is retained if an online refresh fails.
 
-For a custom cover:
+**Preferred: put a custom cover beside the ROM with exactly the same basename:**
 
 ~~~text
-/data/PS5GBA/covers/Game Name (USA).png
+/data/PS5GBA/games/marioland2.gba
+/data/PS5GBA/games/marioland2.png
 ~~~
 
-Match the game filename without its extension, or use its displayed GBA serial. PNG and JPEG are supported.
+The same rule works for `.zip` and `.7z` ROMs, for example `marioland2.7z` plus `marioland2.jpg`. It also works for USB ROM folders. Name comparison is case-insensitive (`.PNG`, `.JPG` and `.JPEG` are accepted), and PNG is preferred before JPG and JPEG. A corrupt or empty image falls back to other candidates.
 
-Only nearby artwork is kept live; downloaded covers remain cached on disk. Successful cached covers are reused. The v2 negative-lookup cache is separate from the previous cover source so old failed lookups do not block the new collection.
+**Cover search order:** image next to the ROM → `/data/PS5GBA/covers/` → USB covers folder → cached download → online Libretro exact/fuzzy matching. For the shared covers folder, use the game file stem or displayed GBA serial as the image name. A same-folder user image is never overwritten by automatic cover downloads.
+
+Only nearby artwork is kept live; downloaded covers remain cached on disk. Successful cached covers are reused when no ROM-adjacent user image is present. The current negative-lookup cache is versioned separately to allow new name-matching improvements to retry earlier misses.
 
 ## BIOS
 
