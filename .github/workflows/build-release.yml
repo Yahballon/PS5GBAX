@@ -37,6 +37,7 @@ jobs:
           python3 tests/test_gbaxy_cover_sources.py
           python3 tests/test_gbaxy_cover_matching.py
           python3 tests/test_gbaxy_cover_fuzzy.py
+          python3 tests/test_gbaxy_cover_sibling.py
           python3 tests/test_gbaxy_exit.py
           g++ -std=c++20 -O2 -Wall -Wextra -Werror -Ips5/frontend tests/test_gbaxy_cover_geometry.cpp -o /tmp/gbaxy-geometry
           /tmp/gbaxy-geometry
